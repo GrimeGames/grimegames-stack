@@ -1,0 +1,682 @@
+/* ============================================
+   GRIMEGAMES - CLEAN CSS (OPTIMIZED)
+   Compatible with Royal Edition Cart
+   ============================================ */
+
+/* === COLOR VARIABLES === */
+:root {
+    --gg-purple: #7B00FF;
+    --gg-purple-light: #A855F7;
+    --gg-purple-dark: #5500CC;
+    --gg-black: #0A0A0A;
+    --gg-dark-gray: #1A1A1A;
+    --gg-medium-gray: #2A2A2A;
+}
+
+/* === GLOBAL DARK THEME === */
+body {
+    background-color: var(--gg-black) !important;
+    color: #E5E7EB !important;
+}
+
+.site,
+#page {
+    background-color: var(--gg-black) !important;
+}
+
+/* === HEADER === */
+.site-header,
+.ast-main-header-wrap,
+.main-header-bar,
+.ast-primary-header {
+    background-color: var(--gg-dark-gray) !important;
+    border-bottom: 2px solid var(--gg-purple) !important;
+    padding: 20px 0 !important;
+}
+
+.site-title a {
+    color: #FFFFFF !important;
+    text-decoration: none !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 2px !important;
+}
+
+.main-navigation a {
+    color: #FFFFFF !important;
+    font-weight: 500 !important;
+}
+
+.main-navigation a:hover {
+    color: var(--gg-purple-light) !important;
+}
+
+/* === CART ICON === */
+.ast-header-woo-cart {
+    color: #FFFFFF !important;
+}
+
+.ast-cart-menu-wrap .count {
+    background: var(--gg-purple) !important;
+    color: #FFFFFF !important;
+}
+
+/* === PRODUCT GRID === */
+.woocommerce ul.products {
+    background-color: var(--gg-black) !important;
+}
+
+.woocommerce ul.products li.product {
+    background-color: var(--gg-dark-gray) !important;
+    border: 1px solid var(--gg-medium-gray) !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+    margin-bottom: 30px !important;
+    transition: all 0.3s ease !important;
+}
+
+.woocommerce ul.products li.product:hover {
+    border-color: var(--gg-purple) !important;
+    transform: translateY(-5px) !important;
+    box-shadow: 0 8px 24px rgba(123, 0, 255, 0.3) !important;
+}
+
+.woocommerce ul.products li.product img {
+    width: 100% !important;
+    border-radius: 6px !important;
+    margin-bottom: 15px !important;
+    background: #000 !important;
+}
+
+.woocommerce ul.products li.product .woocommerce-loop-product__title {
+    color: #FFFFFF !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    min-height: 60px !important;
+    margin-bottom: 10px !important;
+}
+
+.woocommerce ul.products li.product .price {
+    color: var(--gg-purple-light) !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    margin-bottom: 12px !important;
+}
+
+.woocommerce ul.products li.product .button {
+    background: var(--gg-purple) !important;
+    color: #FFFFFF !important;
+    border: 2px solid var(--gg-purple) !important;
+    padding: 10px 20px !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    width: 100% !important;
+    transition: all 0.3s ease !important;
+}
+
+.woocommerce ul.products li.product .button:hover {
+    background: transparent !important;
+    color: var(--gg-purple) !important;
+}
+
+/* === SINGLE PRODUCT PAGE === */
+.single-product .site-content {
+    background-color: var(--gg-black) !important;
+}
+
+/* === CHECKOUT PAGE === */
+.woocommerce-checkout .site-content,
+.woocommerce-checkout article {
+    background-color: var(--gg-black) !important;
+}
+
+/* Fix white strips on checkout page - CRITICAL */
+.woocommerce-checkout .ast-container,
+.woocommerce-checkout .entry-content,
+.woocommerce-checkout .site-main,
+.woocommerce-checkout #primary,
+.woocommerce-checkout article.page,
+body.woocommerce-checkout .site-content > .ast-container,
+body.woocommerce-checkout .woocommerce,
+body.woocommerce-checkout div.woocommerce {
+    background-color: var(--gg-black) !important;
+}
+
+/* Fluid Checkout specific */
+.fc-checkout-page {
+    background: var(--gg-black) !important;
+    color: #FFFFFF !important;
+}
+
+/* Form fields */
+.woocommerce-checkout input.input-text,
+.woocommerce-checkout select,
+.woocommerce-checkout textarea {
+    background: var(--gg-dark-gray) !important;
+    border: 1px solid var(--gg-medium-gray) !important;
+    color: #FFFFFF !important;
+    padding: 12px !important;
+    border-radius: 6px !important;
+}
+
+.woocommerce-checkout input:focus,
+.woocommerce-checkout select:focus,
+.woocommerce-checkout textarea:focus {
+    border-color: var(--gg-purple) !important;
+    outline: none !important;
+}
+
+.woocommerce-checkout label {
+    color: #FFFFFF !important;
+    font-weight: 500 !important;
+}
+
+/* Payment methods */
+.wc_payment_method label {
+    color: #FFFFFF !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+}
+
+.wc_payment_method input[type="radio"] {
+    width: 20px !important;
+    height: 20px !important;
+    accent-color: var(--gg-purple) !important;
+}
+
+.payment_box {
+    color: #CCCCCC !important;
+    background: var(--gg-dark-gray) !important;
+}
+
+/* Order review */
+.woocommerce-checkout-review-order {
+    background: var(--gg-dark-gray) !important;
+    border: 1px solid var(--gg-medium-gray) !important;
+}
+
+/* Place order button */
+#place_order,
+.woocommerce-checkout button[type="submit"] {
+    background: var(--gg-purple) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    padding: 16px 40px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+}
+
+#place_order:hover {
+    background: var(--gg-purple-dark) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* === SORTING DROPDOWN === */
+.woocommerce-ordering select {
+    background-color: var(--gg-dark-gray) !important;
+    color: #FFFFFF !important;
+    border: 2px solid var(--gg-medium-gray) !important;
+    padding: 10px 40px 10px 15px !important;
+    border-radius: 6px !important;
+}
+
+.woocommerce-ordering select:focus {
+    border-color: var(--gg-purple) !important;
+}
+
+/* === PAGINATION === */
+.woocommerce-pagination ul li a,
+.woocommerce-pagination ul li span {
+    background: var(--gg-dark-gray) !important;
+    color: #FFFFFF !important;
+    border: 2px solid var(--gg-medium-gray) !important;
+    padding: 10px 16px !important;
+    border-radius: 6px !important;
+}
+
+.woocommerce-pagination ul li span.current {
+    background: var(--gg-purple) !important;
+    border-color: var(--gg-purple) !important;
+}
+
+/* === HIDE ELEMENTS === */
+
+/* Hide footer */
+.site-footer,
+footer#colophon,
+.site-footer-wrap,
+.ast-footer-wrap,
+footer {
+    display: none !important;
+}
+
+/* Hide search (keep cart) */
+.woocommerce-product-search,
+.widget_product_search,
+.search-form,
+.ast-search-menu-icon {
+    display: none !important;
+}
+
+/* Hide stock quantities */
+.woocommerce div.product p.stock,
+.product .stock {
+    display: none !important;
+}
+
+/* === PRESERVE CUSTOM PAGES === */
+.elementor-widget-container,
+.category-header,
+.burst-container,
+.crown-container,
+.singles-container {
+    background-color: transparent !important;
+}
+
+/* === MOBILE RESPONSIVE === */
+@media (max-width: 768px) {
+    .site-header {
+        padding: 15px 0 !important;
+    }
+    
+    .woocommerce ul.products li.product {
+        width: 100% !important;
+        margin-bottom: 20px !important;
+    }
+    
+    #place_order {
+        font-size: 16px !important;
+        padding: 16px 30px !important;
+    }
+}
+/* Force hide the site header above section */
+.site-header-above-section,
+.site-header-above-section-left,
+.site-header-above-section-center,
+.site-header-above-section-right,
+div.site-header-above-section>div:first-child {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Remove padding from parent section */
+.site-header-section {
+  padding-top: 0 !important;
+}
+/* Hide Astra above header bar */
+.ast-above-header-bar,
+.ast-above-header-wrap,
+.site-above-header-wrap,
+#ast-mobile-header .ast-above-header-bar {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Remove spacing */
+.ast-header-break-point .ast-above-header-bar,
+.ast-header-break-point .site-above-header-wrap {
+  display: none !important;
+}
+/* 
+===========================================
+GRIMEGAMES - FIBOSEARCH PURPLE THEME
+Add this CSS to: Appearance → Customize → Additional CSS
+===========================================
+*/
+
+/* Hide the FiboSearch widget in footer/sidebar */
+.widget_dgwt_wcas_ajax_search {
+    display: none !important;
+}
+
+/* Search Bar - Right Side */
+.search-wrapper {
+    flex: 1;
+    max-width: 700px;
+}
+
+/* Fix for when FiboSearch is injected */
+.search-wrapper > .dgwt-wcas-search-wrapp {
+    width: 100% !important;
+    display: flex !important;
+}
+
+/* Style the FiboSearch form wherever it appears */
+.dgwt-wcas-search-wrapp {
+    background: #1A1A1A !important;
+    border: 2px solid #2A2A2A !important;
+    border-radius: 50px !important;
+    display: flex !important;
+    align-items: center !important;
+    overflow: visible !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative !important;
+    width: 100% !important;
+}
+
+.dgwt-wcas-search-wrapp:focus-within {
+    border-color: #7B00FF !important;
+    box-shadow: 0 0 0 3px rgba(123, 0, 255, 0.1) !important;
+}
+
+.dgwt-wcas-sf-wrapp {
+    flex: 1 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    position: relative !important;
+    width: 100% !important;
+}
+
+.dgwt-wcas-search-input {
+    background: transparent !important;
+    border: none !important;
+    padding: 12px 25px !important;
+    color: #FFFFFF !important;
+    font-size: 15px !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.dgwt-wcas-search-input::placeholder {
+    color: #6B7280 !important;
+}
+
+.dgwt-wcas-search-input:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.dgwt-wcas-search-submit {
+    display: none !important;
+}
+
+/* Hide unwanted icons and elements */
+.dgwt-wcas-ico-magnifier,
+.dgwt-wcas-ico-magnifier-handler,
+.dgwt-wcas-preloader,
+.dgwt-wcas-voice-search,
+.dgwt-wcas-close,
+.dgwt-wcas-search-icon,
+.dgwt-wcas-ico-loupe,
+.dgwt-wcas-search-icon-handler {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* Hide any icon containers */
+.dgwt-wcas-search-wrapp .dgwt-wcas-ico-magnifier-handler,
+.dgwt-wcas-search-wrapp > div:first-child {
+    display: none !important;
+}
+
+/* Make sure no elements appear before the input */
+.dgwt-wcas-sf-wrapp::before,
+.dgwt-wcas-search-wrapp::before {
+    display: none !important;
+    content: none !important;
+}
+
+/* Suggestions dropdown styling */
+.dgwt-wcas-suggestions-wrapp {
+    background: #1A1A1A !important;
+    border: 2px solid #7B00FF !important;
+    border-radius: 12px !important;
+    margin-top: 10px !important;
+    box-shadow: 0 10px 40px rgba(123, 0, 255, 0.3) !important;
+}
+
+.dgwt-wcas-suggestion {
+    background: transparent !important;
+    border-bottom: 1px solid #2A2A2A !important;
+    padding: 12px 15px !important;
+    color: #E5E7EB !important;
+}
+
+.dgwt-wcas-suggestion:last-child {
+    border-bottom: none !important;
+}
+
+.dgwt-wcas-suggestion:hover,
+.dgwt-wcas-suggestion.dgwt-wcas-suggestion-selected {
+    background: rgba(123, 0, 255, 0.1) !important;
+}
+
+.dgwt-wcas-suggestion-title {
+    color: #FFFFFF !important;
+}
+
+.dgwt-wcas-suggestion-price {
+    color: #A855F7 !important;
+}
+
+.dgwt-wcas-st {
+    color: #E5E7EB !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .dgwt-wcas-search-wrapp {
+        border-radius: 12px !important;
+    }
+    
+    .dgwt-wcas-search-input {
+        padding: 14px 20px !important;
+        font-size: 16px !important;
+    }
+    
+    .dgwt-wcas-search-submit {
+        padding: 14px 25px !important;
+    }
+}
+
+/* === HIDE ASTRA HEADER ON PRODUCT PAGES === */
+body.single-product .site-header,
+body.single-product .ast-main-header-wrap,
+body.single-product .main-header-bar,
+body.single-product .ast-primary-header,
+body.single-product #masthead,
+body.single-product .ast-desktop-header,
+body.single-product .ast-mobile-header-wrap,
+body.single-product #ast-mobile-header {
+    display: none !important;
+}
+
+/* Remove the gap left behind by the hidden Astra header — GG nav handles offset */
+body.single-product {
+    padding-top: 70px !important;
+    margin-top: 0 !important;
+}
+
+/* ================================================
+   GRIMEGAMES — BRANDED PRODUCT PAGE NAV BAR
+   ================================================ */
+
+.gg-product-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: rgba(10, 10, 10, 0.97);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 2px solid var(--gg-purple);
+    height: 70px;
+    box-shadow: 0 2px 20px rgba(123, 0, 255, 0.2);
+}
+
+.gg-product-nav__inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+}
+
+/* Logo */
+.gg-product-nav__logo {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+
+.gg-product-nav__logo img {
+    height: 44px;
+    width: auto;
+    display: block;
+    filter: drop-shadow(0 0 8px rgba(123, 0, 255, 0.4));
+    transition: filter 0.3s ease;
+}
+
+.gg-product-nav__logo img:hover {
+    filter: drop-shadow(0 0 14px rgba(123, 0, 255, 0.7));
+}
+
+/* Nav links — desktop */
+.gg-product-nav__links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.gg-product-nav__links li a {
+    color: #E5E7EB;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+.gg-product-nav__links li a:hover {
+    color: #ffffff;
+    background: rgba(123, 0, 255, 0.15);
+    border-color: var(--gg-purple);
+}
+
+.gg-product-nav__links li a.gg-nav-active {
+    color: #ffffff;
+    background: var(--gg-purple);
+    border-color: var(--gg-purple);
+}
+
+/* Hamburger toggle — mobile only */
+.gg-product-nav__toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+
+.gg-product-nav__toggle:hover {
+    background: rgba(123, 0, 255, 0.15);
+}
+
+.gg-product-nav__toggle span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: #E5E7EB;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+/* Hamburger → X animation */
+.gg-product-nav__toggle.is-open span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+.gg-product-nav__toggle.is-open span:nth-child(2) {
+    opacity: 0;
+}
+.gg-product-nav__toggle.is-open span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+    body.single-product {
+        padding-top: 64px !important;
+    }
+
+    .gg-product-nav {
+        height: 64px;
+    }
+
+    .gg-product-nav__inner {
+        padding: 0 20px;
+    }
+
+    .gg-product-nav__toggle {
+        display: flex;
+    }
+
+    .gg-product-nav__links {
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        position: absolute;
+        top: 64px;
+        left: 0;
+        right: 0;
+        background: #111111;
+        border-bottom: 2px solid var(--gg-purple);
+        padding: 16px 20px 20px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .gg-product-nav__links.is-open {
+        display: flex;
+    }
+
+    .gg-product-nav__links li a {
+        display: block;
+        font-size: 15px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border-color: var(--gg-medium-gray);
+    }
+}
