@@ -286,7 +286,13 @@ function gg_ebay_api($method, $path, $query = [], $body = null){
 
 /* -------------------------------------------------------
  * WOO → EBAY: push on stock changes
+ * DISABLED: gg-ebay-webhooks.php already handles Woo→eBay stock
+ * sync via gg_sync_woo_order_to_ebay() using Trading API
+ * ReviseInventoryStatus. Having both active causes DOUBLE
+ * stock reduction on eBay (one via Trading API, one via
+ * Inventory API). Only the cron-based offer scan remains active.
  * ----------------------------------------------------- */
+/*
 add_action('woocommerce_reduce_order_stock', function($order){
     if (!get_option(GG_EBAY_SYNC_OPT,0)) return;
     if (!$order || is_wp_error($order)) return;
@@ -306,6 +312,7 @@ add_action('woocommerce_product_set_stock', function($product){
     $delta = $prev - $curr;                     // positive when reduced
     if ($delta > 0) gg_ebay_sync_push_for_product($product, $delta);
 }, 10, 1);
+*/
 
 function gg_ebay_sync_push_for_product($product, $qty_delta){
     $pid = $product->get_id();
@@ -442,6 +449,13 @@ function gg_ebay_sync_offer_scan(){
         // Only align if Woo manages stock
         if (!$p->managing_stock()) {
             gg_ebay_sync_log("SKIP scan: stock not managed pid=$pid sku=$sku");
+            return;
+        }
+
+        // RACE CONDITION FIX: Skip products recently updated by gg-ebay-webhooks
+        // The webhook handler sets a 60s transient lock after stock changes
+        if (get_transient('gg_stock_lock_' . $pid)) {
+            gg_ebay_sync_log("SKIP scan: stock locked by webhook (recent sale) pid=$pid sku=$sku");
             return;
         }
 
