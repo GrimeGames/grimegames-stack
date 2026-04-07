@@ -1,9 +1,9 @@
 <?php
 /*
 Plugin Name: GrimeGames Performance Optimiser
-Description: Removes unnecessary frontend bloat — Site Kit frontend JS, emoji scripts, payment gateway CSS on non-checkout pages, admin-only assets for non-admins. Does NOT remove any admin functionality.
+Description: Strips frontend bloat for visitors — Site Kit JS, emoji, payment CSS, deferred non-critical CSS, delayed Facebook Pixel, DNS prefetch. Admin functionality preserved.
 Author: GrimeGames
-Version: 1.0
+Version: 2.0
 */
 
 defined('ABSPATH') || exit;
@@ -147,46 +147,107 @@ add_action('wp_enqueue_scripts', function() {
 
 
 /* =========================
-   8. FACEBOOK PIXEL — Delay loading by 3 seconds
-   Pixel fires after the page is interactive, not blocking render.
+   8. FACEBOOK PIXEL — Delay loading until user interaction or 3 seconds
+   Pixel fires after the page is interactive, not blocking initial render.
    ========================= */
 add_action('wp_head', function() {
     if (is_admin() || current_user_can('manage_options')) return;
     ?>
     <script>
     (function() {
-        // Intercept Facebook pixel script injection and delay it
-        var origCreate = document.createElement;
-        var fbDelayed = false;
-        // We'll use a MutationObserver to catch when fbevents.js is added
-        // and delay the network request
+        var fbLoaded = false;
+        function loadFBPixel() {
+            if (fbLoaded) return;
+            fbLoaded = true;
+            !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+            n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+            document,'script','https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '1402118877864570');
+            fbq('track', 'PageView');
+        }
+        // Load on first interaction or after 3 seconds, whichever is first
+        var events = ['mouseover', 'keydown', 'touchstart', 'scroll'];
+        events.forEach(function(e) {
+            document.addEventListener(e, loadFBPixel, { once: true, passive: true });
+        });
+        setTimeout(loadFBPixel, 3000);
     })();
     </script>
     <?php
 }, 1);
 
-// Actually, the cleaner approach: defer the FB script tag via script_loader_tag
-add_filter('script_loader_tag', function($tag, $handle, $src) {
-    // Skip admin
-    if (is_admin()) return $tag;
-
-    // Add defer to non-critical third-party scripts
-    $defer_handles = [
-        'google_gtagjs', // Google Analytics
-    ];
-
-    if (in_array($handle, $defer_handles)) {
-        $tag = str_replace(' src=', ' defer src=', $tag);
-    }
-
-    return $tag;
-}, 10, 3);
+// Block the default FB pixel script if a plugin adds it (prevent double-loading)
+add_action('wp_enqueue_scripts', function() {
+    if (is_admin() || current_user_can('manage_options')) return;
+    wp_dequeue_script('facebook-for-woocommerce-pixel');
+    wp_dequeue_script('facebook-jssdk');
+}, 999);
 
 
 /* =========================
-   9. DISABLE CLOUDFLARE ROCKET LOADER INTERFERENCE
-   Rocket Loader can cause JS execution delays. If enabled,
-   mark critical scripts to skip it.
+   9. DEFER NON-CRITICAL CSS
+   Loads non-essential CSS asynchronously using the print/onload trick.
+   Critical CSS (above-the-fold) loads normally.
+   ========================= */
+add_filter('style_loader_tag', function($html, $handle, $href, $media) {
+    if (is_admin()) return $html;
+    if (current_user_can('manage_options')) return $html;
+
+    // CSS that can be deferred (not needed for above-fold rendering)
+    $defer_styles = [
+        'elementor-icons',           // Icon font CSS - only needed when icons render
+        'elementor-common',          // Elementor admin-facing styles
+        'elementor-pro-notes',       // Elementor notes (admin only)
+        'google-site-kit',           // Site Kit admin bar styles
+        'dashicons',                 // WordPress admin dashicons
+        'admin-bar',                 // Admin bar (still loads for logged-in but rarely needed on paint)
+        'post-views-counter-frontend', // Post views CSS
+        'wc-gateway-stripe-upe-blocks', // Stripe checkout CSS
+        'ppcp-local-alternative-payment-methods', // PayPal checkout CSS
+        'wc-blocks-style',           // WooCommerce blocks CSS
+    ];
+
+    foreach ($defer_styles as $pattern) {
+        if (strpos($handle, $pattern) !== false) {
+            // Replace with async loading: loads as print media (non-blocking), then switches to all
+            $html = str_replace(
+                "media='all'",
+                "media='print' onload=\"this.media='all'\"",
+                $html
+            );
+            // Also handle cases where media attribute isn't 'all'
+            if (strpos($html, "onload") === false) {
+                $html = str_replace(
+                    '/>',
+                    "media='print' onload=\"this.media='all'\" />",
+                    $html
+                );
+            }
+            break;
+        }
+    }
+
+    return $html;
+}, 10, 4);
+
+
+/* =========================
+   10. DNS PREFETCH + PRECONNECT for third-party origins
+   Reduces connection setup time for external resources.
+   ========================= */
+add_action('wp_head', function() {
+    if (is_admin()) return;
+    echo '<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>' . "\n";
+    echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n";
+    echo '<link rel="dns-prefetch" href="//www.googletagmanager.com">' . "\n";
+    echo '<link rel="dns-prefetch" href="//connect.facebook.net">' . "\n";
+}, 1);
+
+
+/* =========================
+   11. ADD DEFER/ASYNC to non-critical scripts
    ========================= */
 add_filter('script_loader_tag', function($tag, $handle, $src) {
     // Critical scripts that Rocket Loader should not defer
