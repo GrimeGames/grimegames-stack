@@ -45,13 +45,27 @@ add_filter('wpseo_metadesc', function($desc) {
         if (!is_wp_error($rarity_terms) && !empty($rarity_terms)) {
             $rarity = $rarity_terms[0];
         }
+        // Fallback: extract rarity from product title
+        if (empty($rarity)) {
+            $rarity_patterns = [
+                'Starlight Rare', 'Ultimate Rare', 'Secret Rare', 'Platinum Secret Rare',
+                'Prismatic Secret Rare', 'Ultra Rare', 'Super Rare', 'Rare',
+                'Collectors Rare', 'Quarter Century Secret Rare', 'Common',
+            ];
+            foreach ($rarity_patterns as $r) {
+                if (stripos($name, $r) !== false) {
+                    $rarity = $r;
+                    break;
+                }
+            }
+        }
 
         // Build description
         $parts = ["Buy {$name} from GrimeGames"];
         if ($rarity && $set_name) {
             $parts[] = "{$rarity} from {$set_name}";
         } elseif ($set_name) {
-            $parts[] = "from {$set_name}";
+            $parts[] = "{$set_name} set";
         }
         if ($price) {
             $parts[] = "Price: £" . number_format((float)$price, 2);
