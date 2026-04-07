@@ -419,7 +419,8 @@ function gg_ticker_sync_from_webhook() {
                   error_log('GG Ticker: webhook queue table not found — skipping sync');
                   return;
        }
-   
+
+   // DEPLOY TEST: 2026-04-07 clean filename deploy verification
        $sale_events = ['ItemSold', 'FixedPriceTransaction'];
        $synced      = get_option('gg_ticker_synced_txns', []);
        $updated     = false;
