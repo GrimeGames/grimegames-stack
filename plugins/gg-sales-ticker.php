@@ -420,6 +420,7 @@ function gg_ticker_sync_from_webhook() {
                   return;
        }
 
+   // DEPLOY TEST v1.1: subfolder path fix verification
    // DEPLOY TEST: 2026-04-07 clean filename deploy verification
        $sale_events = ['ItemSold', 'FixedPriceTransaction'];
        $synced      = get_option('gg_ticker_synced_txns', []);
