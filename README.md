@@ -79,6 +79,20 @@ The ACE editor does not respond to Ctrl+A as a select-all when triggered via MCP
 4. eBay to website customer conversion
 5. SaaS productisation of this stack (longer term)
 
+## Page Design Workflow (Elementor)
+Page designs (homepage, singles, category pages etc.) are built using **Elementor HTML widgets** containing custom HTML/CSS/JS. They are **not deployed via the GitHub pipeline** — they live in the WordPress database.
+
+**How design changes work:**
+1. Matt opens grimegames.com in Chrome while logged into WordPress (admin bar visible at top)
+2. Hand browser access to Claude via MCP
+3. Claude navigates to the page, clicks **Edit with Elementor**, makes the change, screenshots the result
+4. Iterate until happy
+5. Claude extracts the final HTML from the widget and pushes it to the `/page-templates/` folder in GitHub via the API — so the repo stays as the single source of truth
+
+**Important:** The `/page-templates/` folder in this repo is a reference copy only — it is NOT what's live on the site. The live version is always what's in Elementor. Always extract fresh from Elementor before editing, not from the repo file.
+
+**Why not native Elementor widgets?** The animated sections (RC5 sparkler banner, Blazing Dominion ember effects, sales ticker, custom search) require custom JavaScript/canvas that cannot be built with native Elementor widgets. Rebuilding natively would lose these effects. HTML widgets are the right approach for this stack.
+
 ## Session Startup Instructions
 At the start of each session, Claude should:
 1. Read this README for full context
@@ -86,3 +100,4 @@ At the start of each session, Claude should:
 3. The MCP Chrome extension must be connected in Opera GX or Chrome for browser automation
 4. To replace any file's full content, always use the GitHub API (PAT stored in memory) — never use Ctrl+A in the browser editor
 5. GitHub Personal Access Token for API access: stored in Claude's memory
+
