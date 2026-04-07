@@ -48,9 +48,10 @@ add_filter('wpseo_metadesc', function($desc) {
         // Fallback: extract rarity from product title
         if (empty($rarity)) {
             $rarity_patterns = [
-                'Starlight Rare', 'Ultimate Rare', 'Secret Rare', 'Platinum Secret Rare',
-                'Prismatic Secret Rare', 'Ultra Rare', 'Super Rare', 'Rare',
-                'Collectors Rare', 'Quarter Century Secret Rare', 'Common',
+                'Quarter Century Secret Rare', 'Prismatic Secret Rare',
+                'Platinum Secret Rare', 'Collectors Rare', 'Starlight Rare',
+                'Ultimate Rare', 'Secret Rare', 'Ultra Rare', 'Super Rare',
+                'Common', 'Rare',
             ];
             foreach ($rarity_patterns as $r) {
                 if (stripos($name, $r) !== false) {
