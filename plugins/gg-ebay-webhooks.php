@@ -393,7 +393,9 @@ function gg_handle_item_revised($product_id, $ebay_item_id, $notification) {
     }
 
     update_post_meta($product_id, '_stock_status', $qty > 0 ? 'instock' : 'outofstock');
-    gg_webhook_log('success', "Updated stock for product {$product_id}: {$qty}");
+    // Set lock so gg-ebay-live-sync skips this product for 60s (prevents race condition)
+    set_transient('gg_stock_lock_' . $product_id, time(), 60);
+    gg_webhook_log('success', "Updated stock for product {$product_id}: {$qty} (lock set for 60s)");
   }
 
   // Update title
@@ -463,7 +465,11 @@ function gg_handle_item_sold($product_id, $ebay_item_id, $notification) {
   if (function_exists('wc_update_product_stock')) {
     $new_stock = wc_update_product_stock($product_id, $qty_sold, 'decrease');
 
-    gg_webhook_log('success', "Reduced stock for product {$product_id} by {$qty_sold} to {$new_stock}");
+    // Set a transient lock so gg-ebay-live-sync skips this product for 60 seconds
+    // This prevents the race condition where live-sync overwrites the stock we just set
+    set_transient('gg_stock_lock_' . $product_id, time(), 60);
+
+    gg_webhook_log('success', "Reduced stock for product {$product_id} by {$qty_sold} to {$new_stock} (lock set for 60s)");
 
     // Log to sales ticker
     if (function_exists('gg_log_sale')) {
@@ -932,7 +938,11 @@ add_action('rest_api_init', function() {
 });
 
 function gg_github_deploy($request) {
-  $secret    = 'gg_deploy_2026';
+  $secret    = get_option('gg_deploy_secret', '');
+  if (empty($secret)) {
+    error_log('GG Deploy: No deploy secret configured in wp_options (key: gg_deploy_secret)');
+    return new WP_REST_Response(['error' => 'Deploy secret not configured'], 500);
+  }
   $payload   = $request->get_body();
   $signature = $request->get_header('x_hub_signature_256');
   $expected  = 'sha256=' . hash_hmac('sha256', $payload, $secret);
@@ -967,15 +977,25 @@ function gg_github_deploy($request) {
         wp_mkdir_p($plugin_dir);
       }
 
+      // Use GitHub API with optional PAT for private repo support
       $url     = 'https://raw.githubusercontent.com/GrimeGames/grimegames-stack/main/' . $file;
-      $content = file_get_contents($url);
+      $gh_args = ['timeout' => 30, 'sslverify' => true];
+      $gh_pat  = get_option('gg_github_pat', '');
+      if ($gh_pat) {
+        $gh_args['headers'] = ['Authorization' => 'token ' . $gh_pat];
+      }
+      $gh_resp = wp_remote_get($url, $gh_args);
+      $content = (!is_wp_error($gh_resp) && wp_remote_retrieve_response_code($gh_resp) === 200)
+        ? wp_remote_retrieve_body($gh_resp)
+        : false;
 
       if ($content !== false) {
         file_put_contents($plugin_dir . $filename, $content);
         $updated[] = $filename;
         error_log("GG Deploy: Updated {$plugin_name}/{$filename}");
       } else {
-        error_log("GG Deploy: Failed to fetch {$url}");
+        $err_msg = is_wp_error($gh_resp) ? $gh_resp->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code($gh_resp);
+        error_log("GG Deploy: Failed to fetch {$url} — {$err_msg}");
       }
     }
   }
