@@ -42,8 +42,13 @@ function gg_welcome_popup_install() {
 add_action('wp_footer', 'gg_welcome_popup_html');
 
 function gg_welcome_popup_html() {
-  // Don't show on checkout or cart pages
-  if (is_checkout() || is_cart()) {
+  // Only show on the homepage
+  if (!is_front_page() && !is_home()) {
+    return;
+  }
+  
+  // Don't show on checkout or cart pages (safety check)
+  if (function_exists('is_checkout') && is_checkout()) {
     return;
   }
   
