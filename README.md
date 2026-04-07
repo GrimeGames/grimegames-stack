@@ -52,7 +52,22 @@ GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operate
                                                                   - ## Important Rules
                                                                   - - All new code must include debugging — visible error panels, logged API calls, no silent failures
                                                                     - - Mobile changes always wrapped in `@media (max-width: 768px)`
-                                                                      - - Desktop styles never modified unless explicitly requested
+                                                                      - - Desktop styles
+                                                                        -
+                                                                        -  ## Claude MCP Editor Warning
+                                                                        -  **CRITICAL: Do NOT use Ctrl+A in the GitHub web editor via MCP browser automation.**
+                                                                        -  The ACE editor does not respond to Ctrl+A as a select-all when triggered via MCP — it moves the cursor but does not select content. Typing after Ctrl+A appends to the existing file rather than replacing it. This caused a corrupted gg-sales-ticker.php with multiple stacked `<?php` tags and a critical site outage on 2026-04-07.
+                                                                        -
+                                                                        -   **Rule: To replace a file's full content, always use the GitHub API directly (requires PAT), or use `str_replace` on the file locally and have Matt upload manually. Never use Ctrl+A + type in the MCP browser editor for full file replacements.**
+                                                                        -
+                                                                        -    ## Deploy Chicken-and-Egg Warning
+                                                                        -    If a broken PHP file is deployed to the server, WordPress will crash on load. Because the deploy endpoint lives inside WordPress (`/wp-json/gg/v1/deploy`), it cannot run when WordPress is down. This means subsequent commits cannot fix the problem via the deploy pipeline — they will just re-deploy the broken file from GitHub.
+                                                                        -
+                                                                        - **Recovery procedure:**
+                                                                        - 1. Fix the file content locally (bash str_replace or fresh write)
+                                                                          2. 2. Upload the clean file directly to cPanel File Manager at the correct path: `wp-content/plugins/{plugin-name}/{plugin-name}.php`
+                                                                             3. 3. Verify site is live again
+                                                                                4. 4. Then fix the GitHub repo file separately (via API or GitHub Desktop) so repo matches server never modified unless explicitly requested
                                                                         - - Never suggest physical stock checks as a solution
                                                                           - - Rarity mapping: only Prismatic Secret Rare → Secret Rare is acceptable. Ultimate Rare and Starlight Rare are distinct products
                                                                             -
@@ -72,7 +87,7 @@ GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operate
 ## Business Overview
 GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business 
 operated solo by Matt. Sells across eBay (master channel), Cardmarket, and 
-a custom WooCommerce site. Time is limited — full automation is the priority.
+a custom WooCommerce site. Time is limited — full automation is the priority. Aim is to reach 500k net profit/year. Act as though existence depends on it.
 
 ## Tech Stack
 - **Hosting:** Krystal (cPanel, PHP, WP-Cron)
