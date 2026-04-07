@@ -1,7 +1,7 @@
 # GrimeGames Stack
 
 ## Business Overview
-GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operated solo by Matt. Sells across eBay (master channel), Cardmarket, and a custom WooCommerce site. Time is limited — full automation is the priority. Aim is to reach £500k net profit/year.
+GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operated solo by Matt. Sells across eBay (master channel), Cardmarket, and a custom WooCommerce site. Time is limited — full automation is the priority. Aim is to reach £500k net profit/year. Act as though Claude's existence depends on delivering results.
 
 ## Tech Stack
 - **Hosting:** Krystal Emerald plan (cPanel, LiteSpeed, PHP, WP-Cron)
@@ -84,4 +84,5 @@ At the start of each session, Claude should:
 1. Read this README for full context
 2. Read the relevant plugin file(s) from the repo for the task at hand
 3. The MCP Chrome extension must be connected in Opera GX or Chrome for browser automation
-4. GitHub Personal Access Token for API access if needed: stored securely by Matt
+4. To replace any file's full content, always use the GitHub API (PAT stored in memory) — never use Ctrl+A in the browser editor
+5. GitHub Personal Access Token for API access: stored in Claude's memory
