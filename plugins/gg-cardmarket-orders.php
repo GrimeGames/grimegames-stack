@@ -14,7 +14,7 @@ defined('ABSPATH') || exit;
 // CONFIGURATION
 // ============================================================
 
-function gg_cm_imap_host()     { return get_option('gg_cm_imap_host',     'imap.1and1.com'); }
+function gg_cm_imap_host()     { return get_option('gg_cm_imap_host',     'imap.ionos.co.uk'); }
 function gg_cm_imap_port()     { return get_option('gg_cm_imap_port',     993); }
 function gg_cm_imap_user()     { return get_option('gg_cm_imap_user',     ''); }
 function gg_cm_imap_pass()     { return get_option('gg_cm_imap_pass',     ''); }
