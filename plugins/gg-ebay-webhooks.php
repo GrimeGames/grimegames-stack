@@ -917,3 +917,71 @@ add_action('admin_notices', function() {
     echo '<div class="notice notice-success is-dismissible"><p>Webhook logs and queue cleared.</p></div>';
   }
 });
+
+/* =========================
+   GITHUB DEPLOY ENDPOINT
+   v1.1 - Writes to correct plugin subfolder
+   ========================= */
+
+add_action('rest_api_init', function() {
+  register_rest_route('gg/v1', '/deploy', [
+    'methods'             => 'POST',
+    'callback'            => 'gg_github_deploy',
+    'permission_callback' => '__return_true',
+  ]);
+});
+
+function gg_github_deploy($request) {
+  $secret    = 'gg_deploy_2026';
+  $payload   = $request->get_body();
+  $signature = $request->get_header('x_hub_signature_256');
+  $expected  = 'sha256=' . hash_hmac('sha256', $payload, $secret);
+
+  if (!hash_equals($expected, $signature ?? '')) {
+    error_log('GG Deploy: Signature mismatch — unauthorised request blocked');
+    return new WP_REST_Response(['error' => 'Forbidden'], 403);
+  }
+
+  $data    = json_decode($payload, true);
+  $commits = $data['commits'] ?? [];
+  $updated = [];
+
+  foreach ($commits as $commit) {
+    $files = array_merge(
+      $commit['added']    ?? [],
+      $commit['modified'] ?? []
+    );
+
+    foreach ($files as $file) {
+      // Only deploy files from the plugins/ folder
+      if (strpos($file, 'plugins/') !== 0) {
+        continue;
+      }
+
+      $filename    = basename($file);
+      $plugin_name = str_replace('.php', '', $filename);
+      $plugin_dir  = WP_CONTENT_DIR . '/plugins/' . $plugin_name . '/';
+
+      // Create subfolder if it doesn't exist
+      if (!is_dir($plugin_dir)) {
+        wp_mkdir_p($plugin_dir);
+      }
+
+      $url     = 'https://raw.githubusercontent.com/GrimeGames/grimegames-stack/main/' . $file;
+      $content = file_get_contents($url);
+
+      if ($content !== false) {
+        file_put_contents($plugin_dir . $filename, $content);
+        $updated[] = $filename;
+        error_log("GG Deploy: Updated {$plugin_name}/{$filename}");
+      } else {
+        error_log("GG Deploy: Failed to fetch {$url}");
+      }
+    }
+  }
+
+  return new WP_REST_Response([
+    'status' => 'ok',
+    'files'  => $updated,
+  ], 200);
+}
