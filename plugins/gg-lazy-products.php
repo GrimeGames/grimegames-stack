@@ -89,7 +89,7 @@ function gg_lazy_products_endpoint($request) {
             $patterns = [
                 'Quarter Century Secret Rare', 'Prismatic Secret Rare',
                 'Platinum Secret Rare', "Collector's Rare", 'Collectors Rare',
-                'Starlight Rare', 'Ultimate Rare', 'Secret Rare',
+                'Overframe Rare', 'Starlight Rare', 'Ultimate Rare', 'Secret Rare',
                 'Ultra Rare', 'Super Rare', 'Common', 'Rare',
             ];
             foreach ($patterns as $r) {
