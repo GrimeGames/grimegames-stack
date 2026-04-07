@@ -76,12 +76,19 @@ add_action('wp_enqueue_scripts', function() {
     if (!$is_payment_page) {
         // === PAYMENT CSS (exact handles from live audit) ===
         wp_dequeue_style('wc-stripe-blocks-checkout-style');
+        wp_deregister_style('wc-stripe-blocks-checkout-style');
         wp_dequeue_style('stripelink_styles');
+        wp_deregister_style('stripelink_styles');
         wp_dequeue_style('wc_stripe_express_checkout_style');
+        wp_deregister_style('wc_stripe_express_checkout_style');
         wp_dequeue_style('wc-stripe-upe-classic');
+        wp_deregister_style('wc-stripe-upe-classic');
         wp_dequeue_style('ppcp-pwc-payment-method');
+        wp_deregister_style('ppcp-pwc-payment-method');
         wp_dequeue_style('wc-blocks-style');
+        wp_deregister_style('wc-blocks-style');
         wp_dequeue_style('gateway');
+        wp_deregister_style('gateway');
 
         // === PAYMENT JS ===
         wp_dequeue_script('stripe');
@@ -121,19 +128,21 @@ add_action('wp_enqueue_scripts', function() {
     }
 }, 9999);
 
-// Fallback: also dequeue payment CSS right before output (catches late enqueues)
+// Fallback: deregister payment CSS to prevent re-enqueuing by gateway plugins
 add_action('wp_print_styles', function() {
     if (is_admin()) return;
     $is_payment_page = (function_exists('is_checkout') && is_checkout())
                     || (function_exists('is_cart') && is_cart());
     if (!$is_payment_page) {
-        wp_dequeue_style('wc-stripe-blocks-checkout-style');
-        wp_dequeue_style('stripelink_styles');
-        wp_dequeue_style('wc_stripe_express_checkout_style');
-        wp_dequeue_style('wc-stripe-upe-classic');
-        wp_dequeue_style('ppcp-pwc-payment-method');
-        wp_dequeue_style('wc-blocks-style');
-        wp_dequeue_style('gateway');
+        $kill_css = [
+            'wc-stripe-blocks-checkout-style', 'stripelink_styles',
+            'wc_stripe_express_checkout_style', 'wc-stripe-upe-classic',
+            'ppcp-pwc-payment-method', 'wc-blocks-style', 'gateway',
+        ];
+        foreach ($kill_css as $handle) {
+            wp_dequeue_style($handle);
+            wp_deregister_style($handle);
+        }
     }
 }, 9999);
 
