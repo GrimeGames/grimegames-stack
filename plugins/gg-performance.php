@@ -392,15 +392,11 @@ add_action('wp_enqueue_scripts', function() {
 
 
 /* =========================
-   16. DISABLE SOURCEBUSTER + ORDER ATTRIBUTION on non-checkout
+   16. SOURCEBUSTER + ORDER ATTRIBUTION
+   Kept on all pages — WooCommerce requires these for
+   AJAX add-to-cart and order tracking to function.
+   Previously dequeued on non-checkout but this broke add-to-cart.
    ========================= */
-add_action('wp_enqueue_scripts', function() {
-    if (is_admin()) return;
-    if (function_exists('is_checkout') && is_checkout()) return;
-
-    wp_dequeue_script('sourcebuster-js');
-    wp_dequeue_script('wc-order-attribution');
-}, 100);
 
 
 /* =========================
