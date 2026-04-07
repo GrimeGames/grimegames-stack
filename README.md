@@ -38,7 +38,7 @@ GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operate
 - Product title height conflict: global CSS sets min-height:60px, templates set height:35px
 - eBay webhook AuctionCheckoutComplete is ignored in code (correct) but should be formally disabled in eBay notification preferences
 - `gg-ebay-live-sync` (Inventory API) and `gg-ebay-webhooks` (Trading API) both modify WooCommerce stock — potential race condition if cron runs mid-sale
-- `Grimegames-ebay-suite.php` is a legacy monolith file on the server — not yet in repo. `gg-snapshot-mobile` depends on it
+- `Grimegames-ebay-suite.php` is a legacy monolith plugin (v3.8). Now committed to repo at `/plugins/Grimegames-ebay-suite.php`. `gg-snapshot-mobile` depends on it
 
 ## Deploy Workflow (GitHub → Live Server)
 Changes committed to this repo under `/plugins/` are automatically deployed to the live server via a GitHub webhook.
@@ -100,4 +100,5 @@ At the start of each session, Claude should:
 3. The MCP Chrome extension must be connected in Opera GX or Chrome for browser automation
 4. To replace any file's full content, always use the GitHub API (PAT stored in memory) — never use Ctrl+A in the browser editor
 5. GitHub Personal Access Token for API access: stored in Claude's memory
+
 
