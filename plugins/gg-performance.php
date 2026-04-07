@@ -119,7 +119,45 @@ add_action('wp_enqueue_scripts', function() {
         wp_dequeue_style('stripelink_styles');
         wp_dequeue_style('wc_stripe_express_checkout_style');
     }
-}, 100);
+}, 9999);
+
+// Fallback: also dequeue payment CSS right before output (catches late enqueues)
+add_action('wp_print_styles', function() {
+    if (is_admin()) return;
+    $is_payment_page = (function_exists('is_checkout') && is_checkout())
+                    || (function_exists('is_cart') && is_cart());
+    if (!$is_payment_page) {
+        wp_dequeue_style('wc-stripe-blocks-checkout-style');
+        wp_dequeue_style('stripelink_styles');
+        wp_dequeue_style('wc_stripe_express_checkout_style');
+        wp_dequeue_style('wc-stripe-upe-classic');
+        wp_dequeue_style('ppcp-pwc-payment-method');
+        wp_dequeue_style('wc-blocks-style');
+        wp_dequeue_style('gateway');
+    }
+}, 9999);
+
+// Fallback: also dequeue payment/React JS right before footer output
+add_action('wp_print_footer_scripts', function() {
+    if (is_admin()) return;
+    $is_payment_page = (function_exists('is_checkout') && is_checkout())
+                    || (function_exists('is_cart') && is_cart());
+    if ($is_payment_page) return;
+
+    $kill = [
+        'stripe', 'wc-stripe-upe-classic', 'wc_stripe_express_checkout',
+        'ppcp-smart-button', 'ppcp-fraudnet', 'wcpay-frontend-tracks',
+        'react', 'react-dom', 'react-jsx-runtime', 'lodash',
+        'wp-data', 'wp-element', 'wp-compose', 'wp-deprecated', 'wp-dom',
+        'wp-dom-ready', 'wp-escape-html', 'wp-html-entities',
+        'wp-is-shallow-equal', 'wp-keycodes', 'wp-polyfill',
+        'wp-priority-queue', 'wp-private-apis', 'wp-redux-routine',
+        'wp-url', 'wp-api-fetch',
+    ];
+    foreach ($kill as $handle) {
+        wp_dequeue_script($handle);
+    }
+}, 1);
 
 
 /* =========================
@@ -133,7 +171,7 @@ add_action('wp_enqueue_scripts', function() {
     wp_dequeue_script('wc-address-i18n');
     wp_dequeue_script('wc-country-select');
     wp_dequeue_script('wc-custom-place-order-button');
-}, 100);
+}, 9999);
 
 
 /* =========================
