@@ -77,6 +77,8 @@ Capped at 100 rows (oldest pruned on insert).
 | `gg_ticker_synced_txns` | gg-sales-ticker | Array of already-synced transaction IDs (dedup) |
 | `gg_last_sync_time` | Grimegames-ebay-suite | Last full eBay sync timestamp |
 | `gg_price_snapshot_v1` | Grimegames-ebay-suite | Cached competitor price snapshot data |
+| `gg_snapshot_api_errors` | Grimegames-ebay-suite | Snapshot API error log |
+| `gg_snapshot_debug_log` | Grimegames-ebay-suite | Snapshot debug log |
 
 ---
 
@@ -88,16 +90,25 @@ Capped at 100 rows (oldest pruned on insert).
 | `GetMyeBaySelling` | gg-ebay-live-sync | Fetch active listings |
 | `GetItem` | Grimegames-ebay-suite | Fetch individual item details |
 | `ReviseFixedPriceItem` | Grimegames-ebay-suite (snapshot) | Update listing price |
-| `ReviseInventoryStatus` | gg-ebay-webhooks, gg-ebay-live-sync | Update listing quantity |
+| `ReviseInventoryStatus` | gg-ebay-webhooks | Update listing quantity (WooCommerce→eBay on order) |
 
 ### Inventory API (REST, via `ebay_api()` in gg-ebay-live-sync)
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| GET | `/sell/inventory/v1/offer` | Fetch offer details |
+| GET | `/sell/inventory/v1/offer` | Fetch offer details by SKU |
 | POST | `/sell/inventory/v1/bulk_update_price_quantity` | Bulk stock/price update |
+| GET | `/sell/fulfillment/v1/order` | Fetch recent eBay orders |
 
 ### Notification API
-eBay pushes SOAP XML webhooks to `https://grimegames.com/wp-json/gg/v1/ebay-webhook`. Subscribed events: `FixedPriceTransaction`, `ItemRevised`, `ItemOutOfStock`, `ItemClosed`. `AuctionCheckoutComplete` and `ItemSold` are received but ignored (all listings are fixed price).
+eBay pushes SOAP XML webhooks to `https://grimegames.com/wp-json/gg/v1/ebay-webhook`.
+
+**Subscribed events (sent by eBay):** `FixedPriceTransaction`, `ItemRevised`, `ItemOutOfStock`, `ItemClosed`, `ItemSold`
+
+**Processed events (acted on):** `FixedPriceTransaction` (stock deduction), `ItemRevised` (price/stock update), `ItemOutOfStock`, `ItemClosed`
+
+**Ignored events (received but discarded):** `ItemSold` — subscribed but explicitly ignored in code as all GrimeGames listings are fixed price. Returns `status: ignored`.
+
+**Not subscribed:** `AuctionCheckoutComplete` — not in the subscription XML. Handled gracefully if eBay sends it anyway (returns `status: ignored`). This was identified as a source of duplicate stock deductions in the past — keep it unsubscribed.
 
 ---
 
@@ -116,7 +127,7 @@ This is a legacy monolith plugin (~v3.8) that lives on the server but is **not y
 | `gg_xml($s)` | gg-ebay-webhooks | XML-escapes a string for API payloads |
 | `gg_token_user()` | suite internals | Returns current user OAuth token |
 | `gg_token_app()` | suite internals | Returns current app OAuth token |
-| `gg_snapshot_revise_price_on_ebay()` | gg-snapshot-mobile | Revises price on eBay from snapshot tool |
+| `gg_snapshot_revise_price_on_ebay()` | gg-snapshot-mobile (self) | Revises price on eBay — defined in gg-snapshot-mobile.php itself with a `function_exists` guard, NOT in ebay-suite |
 
 **TODO:** This file should be committed to the repo as a priority. Until then, any plugin that calls its functions will silently fail if the suite plugin is deactivated.
 
