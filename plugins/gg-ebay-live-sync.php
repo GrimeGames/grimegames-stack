@@ -205,8 +205,19 @@ function gg_ebay_get_access_token(){
     $refresh = get_option(GG_EBAY_REFRESH_TOKEN_OPT);
     $env     = get_option(GG_EBAY_ENV_OPT,'prod');
 
+    // FALLBACK: If live-sync credentials aren't set, use eBay Suite's credentials
+    // This means you only need to maintain one set of OAuth creds
     if (!$client || !$secret || !$refresh) {
-        gg_ebay_sync_log('WARN token: missing client/secret/refresh; cannot mint access token.');
+        $client  = $client  ?: get_option('ebay_client_id', '');
+        $secret  = $secret  ?: get_option('ebay_client_secret', '');
+        $refresh = $refresh ?: get_option('ebay_refresh_token', '');
+        if ($client && $secret && $refresh) {
+            gg_ebay_sync_log('INFO token: using eBay Suite credentials (fallback)');
+        }
+    }
+
+    if (!$client || !$secret || !$refresh) {
+        gg_ebay_sync_log('WARN token: missing client/secret/refresh in both live-sync AND eBay Suite; cannot mint access token.');
         return '';
     }
 
