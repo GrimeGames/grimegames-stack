@@ -24,6 +24,7 @@ function gg_ticker_create_table() {
     dbDelta($sql);
 }
 
+
 add_action('init', function() {
     global $wpdb;
     $table = $wpdb->prefix . 'gg_sales_ticker';
