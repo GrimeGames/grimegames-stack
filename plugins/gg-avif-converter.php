@@ -237,13 +237,14 @@ function gg_avif_update_htaccess() {
     RewriteEngine On
     # Serve AVIF if browser supports it and .avif file exists
     RewriteCond %{HTTP_ACCEPT} image/avif
-    RewriteCond %{REQUEST_FILENAME} \.(jpe?g|png|gif|webp)$ [NC]
-    RewriteCond %{REQUEST_FILENAME}.avif -f
-    RewriteRule ^(.+)\.(jpe?g|png|gif|webp)$ $1.%2.avif [T=image/avif,L]
+    RewriteCond %{REQUEST_FILENAME} ^(.+)\.(jpe?g|png|gif|webp)$ [NC]
+    RewriteCond %1.avif -f
+    RewriteRule ^(.+)\.(jpe?g|png|gif|webp)$ $1.avif [T=image/avif,L]
 </IfModule>
 <IfModule mod_headers.c>
     <FilesMatch "\.(avif)$">
         Header set Cache-Control "max-age=31536000, public"
+        Header set Vary "Accept"
     </FilesMatch>
 </IfModule>
 # END GrimeGames AVIF
