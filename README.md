@@ -21,6 +21,7 @@ a custom WooCommerce site. Time is limited — full automation is the priority.
 
 ## Key Plugins
 - `gg-ebay-webhooks` — Handles eBay webhook events, stock depletion
+- <!-- deploy test -->
 - `gg-cardmarket-orders` — IMAP email parser for Cardmarket orders
 - `gg-ebay-live-sync` — Syncs WooCommerce stock to eBay
 - `gg-ajax-search` — Custom search replacing FiboSearch
