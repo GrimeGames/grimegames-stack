@@ -14,6 +14,7 @@ GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operate
 
 ## Repository Structure
 - `/plugins` — All custom GrimeGames WordPress plugins (gg- prefixed)
+- `/plugins/gg-ajax-search-assets` — CSS/JS assets for the AJAX search plugin (not auto-deployed — live on server in `gg-ajax-search-plugin/assets/`)
 - `/page-templates` — Custom page code for category/set pages (HTML/CSS/JS saved as .php for reference)
 - `/theme` — Child theme customisations and custom CSS
 - `/docs` — Architecture decisions and documentation
@@ -22,26 +23,24 @@ GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operate
 - `gg-ebay-webhooks` — Handles eBay webhook events, stock depletion. Also contains the GitHub deploy endpoint (see Deploy Workflow below)
 - `gg-cardmarket-orders` — IMAP email parser for Cardmarket orders
 - `gg-ebay-live-sync` — Syncs WooCommerce stock to eBay via REST/OAuth (runs every 5 mins via WP-Cron)
-- `gg-ajax-search` — Custom search replacing FiboSearch. Has external dependency on assets/search.css and assets/search.js not yet in repo
+- `gg-ajax-search` — Custom search replacing FiboSearch. Assets (search.css, search.js) in `/plugins/gg-ajax-search-assets/`
 - `gg-sales-ticker` — Live sales ticker on homepage (v2.1 — reads from DB-backed webhook queue table)
 - `gg-royal-mail` — Click & Drop API for shipping labels
 - `gg-snapshot-mobile` — Mobile PWA pricing tool. Calls gg_snapshot_revise_price_on_ebay() which lives in Grimegames-ebay-suite.php
 - `gg-price-watch` — Price monitoring
 - `gg-welcome-popup` — Email capture with 3% discount, GDPR consent, CSV export. Has dormant email list worth using
 - `gg-anti-bot` — Honeypot + rate limiting at checkout (replaces reCAPTCHA)
-- `gg-ebay-throttle` — 3s delay between eBay Trading API calls, caps at 20/run to prevent 518 errors
 - `gg-most-viewed-carousel` — Shortcode [gg_most_viewed_carousel] for homepage
-- `gg-side-cart` — Custom side cart with Stripe Express Checkout (Apple Pay / Google Pay / Link)
+- `gg-side-cart` — Custom side cart with Stripe Express Checkout (Apple Pay / Google Pay / Link). Lives in Code Snippets on server, committed to repo for reference.
+- `gg-avif-converter` — AVIF image converter using PHP GD, hourly WP-Cron batches. Lives in Code Snippets on server, committed to repo for reference.
 
 ## Known Issues / Technical Debt
-- `gg-ajax-search` has external dependency on assets/search.css and assets/search.js — not yet in repo
 - Product title height conflict: global CSS sets min-height:60px, templates set height:35px
 - eBay webhook AuctionCheckoutComplete is ignored in code (correct) but should be formally disabled in eBay notification preferences
 - ~~`gg-ebay-live-sync` (Inventory API) and `gg-ebay-webhooks` (Trading API) both modify WooCommerce stock — potential race condition if cron runs mid-sale~~ **FIXED 2026-04-07:** Transient lock mechanism added — webhooks set a 60s lock per product after stock changes, live-sync skips locked products
 - `gg-ebay-live-sync` Woo→eBay hooks (`woocommerce_reduce_order_stock`, `woocommerce_product_set_stock`) disabled as of 2026-04-07 — they caused double eBay stock reduction alongside `gg-ebay-webhooks`' `gg_sync_woo_order_to_ebay()`. Only the cron-based offer scan remains active.
-- `gg-ebay-throttle` is redundant — throttle logic (3s gap, 20-call cap) is already built into `gg_trading_call()` in the eBay Suite. Can be safely deactivated/removed.
 - `gg-price-watch` and the eBay Suite's Snapshot Engine have significant feature overlap — both search eBay competitors by set code + rarity and undercut by 1%. Should consolidate to one.
-- `gg-side-cart.php` and `gg-avif-converter.php` are live on server but not yet committed to repo
+- `gg-ebay-throttle.php` still active on live server but removed from repo — can be safely deactivated in WP admin (redundant with Suite's built-in throttle)
 - `Grimegames-ebay-suite.php` is a legacy monolith plugin (v3.8). Now committed to repo at `/plugins/Grimegames-ebay-suite.php`. `gg-snapshot-mobile` depends on it
 
 ## Deploy Workflow (GitHub → Live Server)
@@ -78,14 +77,16 @@ The ACE editor does not respond to Ctrl+A as a select-all when triggered via MCP
 - eBay webhook `AuctionCheckoutComplete` should be disabled — causes duplicate stock depletion alongside `FixedPriceTransaction`
 
 ## Current Priorities
-1. Add `gg-ajax-search` assets (search.css, search.js) to repo
+1. ~~Add `gg-ajax-search` assets (search.css, search.js) to repo~~ ✅ Done — in `/plugins/gg-ajax-search-assets/`
 2. ~~Fix race condition between gg-ebay-live-sync and gg-ebay-webhooks~~ ✅ Done
-3. Commit `gg-side-cart.php` and `gg-avif-converter.php` to repo
-4. Remove/deactivate `gg-ebay-throttle.php` (redundant with Suite built-in throttle)
-5. Consolidate OAuth credentials (Suite + Live Sync use separate wp_options keys)
-6. SEO and traffic growth
-7. eBay to website customer conversion
-8. SaaS productisation of this stack (longer term)
+3. ~~Commit `gg-side-cart.php` and `gg-avif-converter.php` to repo~~ ✅ Done
+4. ~~Remove `gg-ebay-throttle.php` from repo (redundant)~~ ✅ Done — still active on server, deactivate when convenient
+5. ~~Consolidate OAuth credentials (Suite + Live Sync)~~ ✅ Done — live-sync falls back to Suite creds
+6. Deactivate `gg-ebay-throttle` plugin on live server
+7. Consolidate `gg-price-watch` and eBay Suite snapshot engine (pick one, retire the other)
+8. SEO and traffic growth
+9. eBay to website customer conversion
+10. SaaS productisation of this stack (longer term)
 
 ## Page Design Workflow (Elementor)
 Page designs (homepage, singles, category pages etc.) are built using **Elementor HTML widgets** containing custom HTML/CSS/JS. They are **not deployed via the GitHub pipeline** — they live in the WordPress database.
