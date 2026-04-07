@@ -117,8 +117,7 @@ add_action('wp_enqueue_scripts', function() {
         wp_dequeue_script('wp-priority-queue');
         wp_dequeue_script('wp-private-apis');
         wp_dequeue_script('wp-redux-routine');
-        wp_dequeue_script('wp-url');
-        wp_dequeue_script('wp-api-fetch');
+        // NOTE: wp-url and wp-api-fetch kept — required by gg-side-cart for WC Store API
     }
 
     // Strip Stripe Link CSS from My Account too
@@ -161,7 +160,6 @@ add_action('wp_print_footer_scripts', function() {
         'wp-dom-ready', 'wp-escape-html', 'wp-html-entities',
         'wp-is-shallow-equal', 'wp-keycodes', 'wp-polyfill',
         'wp-priority-queue', 'wp-private-apis', 'wp-redux-routine',
-        'wp-url', 'wp-api-fetch',
     ];
     foreach ($kill as $handle) {
         wp_dequeue_script($handle);
