@@ -1,0 +1,226 @@
+/**
+ * GrimeGames AJAX Search Styles
+ * Version: 1.0.0
+ */
+
+/* Search Wrapper */
+.gg-search-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 700px;
+}
+
+/* Input Container */
+.gg-search-input-wrapper {
+    position: relative;
+    display: flex;
+    background: #1A1A1A;
+    border: 2px solid #2A2A2A;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+}
+
+.gg-search-input-wrapper:focus-within {
+    border-color: #7B00FF;
+    box-shadow: 0 0 0 3px rgba(123, 0, 255, 0.1);
+}
+
+/* Search Input */
+.gg-search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 12px 25px;
+    color: #FFFFFF;
+    font-size: 15px;
+    outline: none;
+}
+
+.gg-search-input::placeholder {
+    color: #6B7280;
+}
+
+/* Search Button */
+.gg-search-submit {
+    background: #7B00FF;
+    border: none;
+    color: #FFFFFF;
+    padding: 12px 30px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    border-radius: 0 50px 50px 0;
+}
+
+.gg-search-submit:hover {
+    background: #9333EA;
+}
+
+/* Loading Spinner */
+.gg-search-loading {
+    position: absolute;
+    right: 120px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7B00FF;
+    display: none;
+}
+
+.gg-search-loading.active {
+    display: block;
+}
+
+/* Results Dropdown */
+.gg-search-results {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    right: 0;
+    background: #1A1A1A;
+    border: 2px solid #7B00FF;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(123, 0, 255, 0.3);
+    display: none;
+    max-height: 500px;
+    overflow-y: auto;
+    z-index: 9999;
+}
+
+.gg-search-results.active {
+    display: block;
+}
+
+/* Individual Result */
+.gg-search-result {
+    display: flex;
+    gap: 15px;
+    padding: 12px 15px;
+    border-bottom: 1px solid #2A2A2A;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+}
+
+.gg-search-result:hover {
+    background: rgba(123, 0, 255, 0.1);
+}
+
+.gg-search-result:last-child {
+    border-bottom: none;
+}
+
+/* Result Image */
+.gg-search-result-image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #2A2A2A;
+    flex-shrink: 0;
+}
+
+/* Result Info */
+.gg-search-result-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.gg-search-result-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #E5E7EB;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gg-search-result-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    color: #9CA3AF;
+    flex-wrap: wrap;
+}
+
+/* Result Meta Elements */
+.gg-search-result-rarity {
+    color: #7B00FF;
+    font-weight: 600;
+}
+
+.gg-search-result-price {
+    font-weight: 700;
+    color: #10B981;
+}
+
+.gg-search-result-stock {
+    color: #F59E0B;
+}
+
+.gg-search-result-stock.out-of-stock {
+    color: #EF4444;
+}
+
+/* No Results Message */
+.gg-search-no-results {
+    padding: 30px 20px;
+    text-align: center;
+    color: #9CA3AF;
+}
+
+/* Mobile Overlay */
+.gg-search-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 9998;
+    display: none;
+}
+
+.gg-search-overlay.active {
+    display: block;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .gg-search-results {
+        position: fixed;
+        top: 80px;
+        left: 10px;
+        right: 10px;
+        max-height: calc(100vh - 100px);
+    }
+    
+    .gg-search-submit {
+        padding: 12px 20px;
+        font-size: 13px;
+    }
+    
+    .gg-search-loading {
+        right: 100px;
+    }
+}
+
+/* Custom Scrollbar for Results */
+.gg-search-results::-webkit-scrollbar {
+    width: 8px;
+}
+
+.gg-search-results::-webkit-scrollbar-track {
+    background: #1A1A1A;
+}
+
+.gg-search-results::-webkit-scrollbar-thumb {
+    background: #2A2A2A;
+    border-radius: 4px;
+}
+
+.gg-search-results::-webkit-scrollbar-thumb:hover {
+    background: #7B00FF;
+}
