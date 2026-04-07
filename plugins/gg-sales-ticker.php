@@ -32,6 +32,7 @@ add_action('init', function() {
     }
 }, 5);
 
+
 function gg_log_sale($item_title, $sale_price, $source = 'ebay', $sold_at = null) {
     global $wpdb;
     $table      = $wpdb->prefix . 'gg_sales_ticker';
