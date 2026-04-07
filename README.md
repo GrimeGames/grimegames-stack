@@ -37,15 +37,20 @@ GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operate
 - `gg-ajax-search` has external dependency on assets/search.css and assets/search.js — not yet in repo
 - Product title height conflict: global CSS sets min-height:60px, templates set height:35px
 - eBay webhook AuctionCheckoutComplete is ignored in code (correct) but should be formally disabled in eBay notification preferences
-- `gg-ebay-live-sync` (Inventory API) and `gg-ebay-webhooks` (Trading API) both modify WooCommerce stock — potential race condition if cron runs mid-sale
+- ~~`gg-ebay-live-sync` (Inventory API) and `gg-ebay-webhooks` (Trading API) both modify WooCommerce stock — potential race condition if cron runs mid-sale~~ **FIXED 2026-04-07:** Transient lock mechanism added — webhooks set a 60s lock per product after stock changes, live-sync skips locked products
+- `gg-ebay-live-sync` Woo→eBay hooks (`woocommerce_reduce_order_stock`, `woocommerce_product_set_stock`) disabled as of 2026-04-07 — they caused double eBay stock reduction alongside `gg-ebay-webhooks`' `gg_sync_woo_order_to_ebay()`. Only the cron-based offer scan remains active.
+- `gg-ebay-throttle` is redundant — throttle logic (3s gap, 20-call cap) is already built into `gg_trading_call()` in the eBay Suite. Can be safely deactivated/removed.
+- `gg-price-watch` and the eBay Suite's Snapshot Engine have significant feature overlap — both search eBay competitors by set code + rarity and undercut by 1%. Should consolidate to one.
+- `gg-side-cart.php` and `gg-avif-converter.php` are live on server but not yet committed to repo
 - `Grimegames-ebay-suite.php` is a legacy monolith plugin (v3.8). Now committed to repo at `/plugins/Grimegames-ebay-suite.php`. `gg-snapshot-mobile` depends on it
 
 ## Deploy Workflow (GitHub → Live Server)
 Changes committed to this repo under `/plugins/` are automatically deployed to the live server via a GitHub webhook.
 
 - **Webhook URL:** `https://grimegames.com/wp-json/gg/v1/deploy`
-- **Secret:** stored in gg-ebay-webhooks.php as `gg_deploy_2026`
-- **How it works:** On push, GitHub POSTs to the WordPress REST endpoint. The endpoint verifies the HMAC signature, reads the commit payload, fetches any changed files under `/plugins/` from raw.githubusercontent.com, and writes them to `wp-content/plugins/{plugin-name}/{plugin-name}.php` on the server
+- **Secret:** stored in `wp_options` key `gg_deploy_secret` (set via WP admin or WP-CLI — never hardcoded in source)
+- **GitHub PAT (optional):** stored in `wp_options` key `gg_github_pat` — enables deploy from private repos
+- **How it works:** On push, GitHub POSTs to the WordPress REST endpoint. The endpoint verifies the HMAC signature, reads the commit payload, fetches any changed files under `/plugins/` from raw.githubusercontent.com (using `wp_remote_get` with optional PAT auth), and writes them to `wp-content/plugins/{plugin-name}/{plugin-name}.php` on the server
 - **Scope:** Deploys plugin files only. Page templates and theme files require manual copy via cPanel
 
 ## Deploy Chicken-and-Egg Warning
@@ -74,10 +79,13 @@ The ACE editor does not respond to Ctrl+A as a select-all when triggered via MCP
 
 ## Current Priorities
 1. Add `gg-ajax-search` assets (search.css, search.js) to repo
-2. Fix race condition between gg-ebay-live-sync and gg-ebay-webhooks
-3. SEO and traffic growth
-4. eBay to website customer conversion
-5. SaaS productisation of this stack (longer term)
+2. ~~Fix race condition between gg-ebay-live-sync and gg-ebay-webhooks~~ ✅ Done
+3. Commit `gg-side-cart.php` and `gg-avif-converter.php` to repo
+4. Remove/deactivate `gg-ebay-throttle.php` (redundant with Suite built-in throttle)
+5. Consolidate OAuth credentials (Suite + Live Sync use separate wp_options keys)
+6. SEO and traffic growth
+7. eBay to website customer conversion
+8. SaaS productisation of this stack (longer term)
 
 ## Page Design Workflow (Elementor)
 Page designs (homepage, singles, category pages etc.) are built using **Elementor HTML widgets** containing custom HTML/CSS/JS. They are **not deployed via the GitHub pipeline** — they live in the WordPress database.
@@ -92,6 +100,23 @@ Page designs (homepage, singles, category pages etc.) are built using **Elemento
 **Important:** The `/page-templates/` folder in this repo is a reference copy only — it is NOT what's live on the site. The live version is always what's in Elementor. Always extract fresh from Elementor before editing, not from the repo file.
 
 **Why not native Elementor widgets?** The animated sections (RC5 sparkler banner, Blazing Dominion ember effects, sales ticker, custom search) require custom JavaScript/canvas that cannot be built with native Elementor widgets. Rebuilding natively would lose these effects. HTML widgets are the right approach for this stack.
+
+## Post-Deploy Setup (One-Time)
+After the 2026-04-07 security update, these wp_options must be set manually (via WP-CLI, cPanel terminal, or a one-time PHP snippet):
+
+```bash
+# Set the deploy secret (was previously hardcoded — REQUIRED for deploys to work)
+wp option update gg_deploy_secret 'gg_deploy_2026'
+
+# Set GitHub PAT for private repo deploy support (OPTIONAL — only needed if repo goes private)
+wp option update gg_github_pat 'ghp_YOUR_TOKEN_HERE'
+```
+
+Or via cPanel Terminal:
+```bash
+cd /home/dcbedead/public_html
+php -r "require 'wp-load.php'; update_option('gg_deploy_secret', 'gg_deploy_2026'); echo 'Done';"
+```
 
 ## Session Startup Instructions
 At the start of each session, Claude should:
