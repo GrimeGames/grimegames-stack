@@ -477,6 +477,109 @@ add_action('template_redirect', function() {
             $html
         );
 
+        // === STRIP DEFERRED PRODUCTS FROM HTML ===
+        // Remove products with data-deferred="true" from the server-rendered HTML.
+        // These will be loaded via AJAX from /wp-json/gg/v1/products instead.
+        // This reduces the Singles page from 11.6MB / 235K DOM nodes to ~600KB / 15K nodes.
+        if (strpos($html, 'data-deferred="true"') !== false) {
+            // Remove all <li> elements with data-deferred="true"
+            $html = preg_replace(
+                '/<li\b[^>]*data-deferred="true"[^>]*>.*?<\/li>/s',
+                '',
+                $html
+            );
+
+            // Update the product count display (currently shows "48 products")
+            // We'll update it via JS once all products are loaded
+
+            // Inject the AJAX lazy loader script before </body>
+            $loader_script = '
+<script id="gg-lazy-loader">
+(function() {
+    var grid = document.querySelector("ul.products");
+    if (!grid) return;
+
+    var sentinel = document.getElementById("gg-sentinel");
+    var countEl = null;
+    // Find the product count display
+    document.querySelectorAll("*").forEach(function(el) {
+        if (el.childNodes.length === 1 && el.textContent.match(/^\d+ products$/)) {
+            countEl = el;
+        }
+    });
+
+    var category = "singles";
+    // Detect category from body classes or URL
+    if (window.location.pathname.includes("rarity-collection")) category = "rc05";
+    if (window.location.pathname.includes("blazing-dominion")) category = "blazing-dominion";
+    if (window.location.pathname.includes("burst-protocol")) category = "burst-protocol";
+
+    // Fetch all products from API
+    fetch("/wp-json/gg/v1/products?category=" + category + "&limit=1000", {
+        headers: {"Accept": "application/json, image/avif"}
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (!data.products) return;
+
+        // Get IDs of products already in the DOM (the initial 48)
+        var existingIds = new Set();
+        grid.querySelectorAll("li[data-rarity]").forEach(function(li) {
+            var cartBtn = li.querySelector("[data-product_id]");
+            if (cartBtn) existingIds.add(parseInt(cartBtn.getAttribute("data-product_id")));
+        });
+
+        // Build and append remaining products
+        var fragment = document.createDocumentFragment();
+        var added = 0;
+        data.products.forEach(function(p) {
+            if (existingIds.has(p.id)) return;
+
+            var li = document.createElement("li");
+            li.className = "ast-article-single product type-product instock product_cat-singles has-post-thumbnail purchasable product-type-simple";
+            li.setAttribute("data-set", p.set || "");
+            li.setAttribute("data-rarity", p.rarity || "");
+            li.setAttribute("data-price", p.price || "0");
+            li.setAttribute("data-deferred", "true");
+            li.style.display = "none";
+
+            li.innerHTML = \'<div class="astra-shop-thumbnail-wrap">\' +
+                \'<a href="\' + p.url + \'" class="woocommerce-LoopProduct-link woocommerce-loop-product__link">\' +
+                \'<img loading="lazy" decoding="async" width="300" height="300" src="\' + p.img + \'" class="attachment-woocommerce_thumbnail size-woocommerce_thumbnail" alt="\' + p.name.replace(/"/g, "&quot;") + \'">\' +
+                \'</a></div>\' +
+                \'<div class="astra-shop-summary-wrap">\' +
+                \'<a href="\' + p.url + \'" class="ast-loop-product__link"><h2 class="woocommerce-loop-product__title">\' + p.name + \'</h2></a>\' +
+                \'<span class="price">\' + p.display + \'</span>\' +
+                \'<a href="?add-to-cart=\' + p.id + \'" data-quantity="1" class="ast-on-card-button ast-select-options-trigger product_type_simple add_to_cart_button ajax_add_to_cart" data-product_id="\' + p.id + \'" data-product_sku="\' + (p.sku || "") + \'" rel="nofollow">Add to basket</a>\' +
+                \'</div>\';
+
+            fragment.appendChild(li);
+            added++;
+        });
+
+        grid.appendChild(fragment);
+
+        // Update count
+        if (countEl) {
+            countEl.textContent = data.total + " products";
+        }
+
+        // Re-initialize progressive rendering if ggResetProgressiveRender exists
+        if (typeof ggResetProgressiveRender === "function") {
+            ggResetProgressiveRender();
+        }
+
+        console.log("GG Lazy Loader: added " + added + " products via API (" + data.total + " total)");
+    })
+    .catch(function(err) {
+        console.error("GG Lazy Loader error:", err);
+    });
+})();
+</script>';
+
+            $html = str_replace('</body>', $loader_script . '</body>', $html);
+        }
+
         return $html;
     });
 }, 1);
