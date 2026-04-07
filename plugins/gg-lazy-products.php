@@ -152,7 +152,7 @@ add_action('pre_get_posts', function($query) {
     if (is_admin() || !$query->is_main_query()) return;
 
     // Identify pages that need lazy loading
-    $lazy_pages = [332]; // Singles page ID
+    $lazy_pages = [332, 10289]; // Singles page, RC5 page
     
     // Also apply to product_cat archives with many products
     if ($query->is_tax('product_cat')) {
@@ -168,7 +168,7 @@ add_action('pre_get_posts', function($query) {
 // For Elementor pages using [products] shortcode, hook into the shortcode query
 add_filter('woocommerce_shortcode_products_query', function($query_args, $atts, $type) {
     // Check if we're on a page that should lazy-load
-    if (is_page(332)) { // Singles page
+    if (is_page([332, 10289])) { // Singles + RC5
         $query_args['posts_per_page'] = 48;
     }
     return $query_args;
@@ -177,7 +177,7 @@ add_filter('woocommerce_shortcode_products_query', function($query_args, $atts, 
 // Also limit the Astra shop loop if it's rendering all products
 add_filter('loop_shop_per_page', function($cols) {
     // Only limit on the specific heavy pages
-    if (is_page(332)) {
+    if (is_page([332, 10289])) {
         return 48;
     }
     return $cols;
@@ -191,11 +191,13 @@ add_filter('loop_shop_per_page', function($cols) {
 add_action('wp_footer', function() {
     if (is_admin()) return;
     // Only inject on pages that have lazy-loaded products
-    if (!is_page(332) && !is_product_category()) return;
+    if (!is_page([332, 10289]) && !is_product_category()) return;
     
     $category = 'singles'; // default
-    if (is_page() && get_the_ID() === 332) {
-        $category = 'singles';
+    if (is_page()) {
+        $page_id = get_the_ID();
+        if ($page_id === 332) $category = 'singles';
+        elseif ($page_id === 10289) $category = 'rc05';
     }
     ?>
     <script id="gg-lazy-loader">
@@ -235,6 +237,9 @@ add_action('wp_footer', function() {
                 var li = document.createElement("li");
                 li.className = "ast-article-single desktop-align-left tablet-align-left mobile-align-left product type-product instock product_cat-singles has-post-thumbnail purchasable product-type-simple";
                 li.setAttribute("data-deferred", "true");
+                li.setAttribute("data-set", p.set || "");
+                li.setAttribute("data-rarity", p.rarity || "");
+                li.setAttribute("data-price", p.price || "0");
                 li.style.display = "none";
 
                 li.innerHTML =
