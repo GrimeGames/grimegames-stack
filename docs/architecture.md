@@ -133,16 +133,29 @@ This is a legacy monolith plugin (~v3.8) that lives on the server but is **not y
 
 ---
 
-## Race Condition — gg-ebay-live-sync vs gg-ebay-webhooks
+## Race Condition — gg-ebay-live-sync vs gg-ebay-webhooks — RESOLVED
 
 Both plugins modify WooCommerce stock independently:
 
 - `gg-ebay-webhooks` reduces stock in real-time when a `FixedPriceTransaction` webhook arrives
-- `gg-ebay-live-sync` runs every 5 minutes via WP-Cron and calls `ReviseInventoryStatus` with current WooCommerce stock as source of truth
+- `gg-ebay-live-sync` runs every 5 minutes via WP-Cron and aligns WooCommerce stock with eBay offer quantities
 
-**Risk:** If a webhook arrives and reduces stock to 0, but the cron fires immediately after and reads the WooCommerce stock before the webhook has written it, it could push a stale (non-zero) quantity back to eBay.
+**Risk (was):** If a webhook arrives and reduces stock to 0, but the cron fires immediately after and reads the WooCommerce stock before the webhook has written it, it could push a stale (non-zero) quantity back to eBay.
 
-**Mitigation needed:** Add a short-lived transient lock in `gg-ebay-webhooks` after processing a sale, and have `gg-ebay-live-sync` skip products locked in the last 60 seconds.
+**Mitigation (implemented 2026-04-07):**
+
+1. **Transient lock:** `gg-ebay-webhooks` sets `set_transient('gg_stock_lock_' . $product_id, time(), 60)` after both `gg_handle_item_sold()` and `gg_handle_item_revised()` stock changes.
+2. **Lock check:** `gg-ebay-live-sync`'s `gg_ebay_sync_offer_scan()` checks `get_transient('gg_stock_lock_' . $pid)` and skips any locked product with log message `"SKIP scan: stock locked by webhook"`.
+3. **Duplicate hook removal:** `gg-ebay-live-sync`'s `woocommerce_reduce_order_stock` and `woocommerce_product_set_stock` hooks were disabled (commented out). These caused double eBay stock reduction because `gg-ebay-webhooks` already handles Woo→eBay via `gg_sync_woo_order_to_ebay()` using Trading API `ReviseInventoryStatus`. Only the cron-based offer scan in live-sync remains active.
+
+---
+
+## wp_options Keys (Deploy & GitHub)
+
+| Option Key | Set By | Contains |
+|------------|--------|----------|
+| `gg_deploy_secret` | Manual (one-time setup) | HMAC secret for GitHub webhook deploy verification |
+| `gg_github_pat` | Manual (optional) | GitHub Personal Access Token for private repo file fetches during deploy |
 
 ---
 
