@@ -33,6 +33,7 @@ GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operate
 - `gg-most-viewed-carousel` — Shortcode [gg_most_viewed_carousel] for homepage
 - `gg-side-cart` — Custom side cart with Stripe Express Checkout (Apple Pay / Google Pay / Link). Lives in Code Snippets on server, committed to repo for reference.
 - `gg-avif-converter` — AVIF image converter using PHP GD, hourly WP-Cron batches. Lives in Code Snippets on server, committed to repo for reference.
+- `gg-performance` — Frontend performance optimiser. Strips Site Kit JS (26 files) for non-admin visitors, emoji scripts, payment CSS from non-checkout pages, Elementor notes module, jQuery Migrate. Deployed via pipeline, activated on server.
 
 ## Known Issues / Technical Debt
 - Product title height conflict: global CSS sets min-height:60px, templates set height:35px
@@ -41,6 +42,9 @@ GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operate
 - `gg-ebay-live-sync` Woo→eBay hooks (`woocommerce_reduce_order_stock`, `woocommerce_product_set_stock`) disabled as of 2026-04-07 — they caused double eBay stock reduction alongside `gg-ebay-webhooks`' `gg_sync_woo_order_to_ebay()`. Only the cron-based offer scan remains active.
 - `gg-price-watch` and the eBay Suite's Snapshot Engine have significant feature overlap — both search eBay competitors by set code + rarity and undercut by 1%. Should consolidate to one.
 - `gg-ebay-throttle.php` still active on live server but removed from repo — can be safely deactivated in WP admin (redundant with Suite's built-in throttle)
+- `gg-ajax-search` assets (search.css, search.js) intermittently return 503 — Cloudflare Bot Fight Mode blocking these paths. Files exist on server and are accessible directly via curl. Needs Cloudflare WAF rule to whitelist.
+- Facebook Pixel open-bridge (`/?ob=open-bridge/events`) returning 503 — same Cloudflare issue. Ad attribution data may be incomplete.
+- AVIF images not being served on product pages despite converter having processed ~81% of images. `.htaccess` rewrite rules may not be matching product thumbnail paths. Needs investigation.
 - `Grimegames-ebay-suite.php` is a legacy monolith plugin (v3.8). Now committed to repo at `/plugins/Grimegames-ebay-suite.php`. `gg-snapshot-mobile` depends on it
 
 ## Deploy Workflow (GitHub → Live Server)
@@ -77,16 +81,22 @@ The ACE editor does not respond to Ctrl+A as a select-all when triggered via MCP
 - eBay webhook `AuctionCheckoutComplete` should be disabled — causes duplicate stock depletion alongside `FixedPriceTransaction`
 
 ## Current Priorities
-1. ~~Add `gg-ajax-search` assets (search.css, search.js) to repo~~ ✅ Done — in `/plugins/gg-ajax-search-assets/`
+1. ~~Add `gg-ajax-search` assets (search.css, search.js) to repo~~ ✅ Done
 2. ~~Fix race condition between gg-ebay-live-sync and gg-ebay-webhooks~~ ✅ Done
 3. ~~Commit `gg-side-cart.php` and `gg-avif-converter.php` to repo~~ ✅ Done
-4. ~~Remove `gg-ebay-throttle.php` from repo (redundant)~~ ✅ Done — still active on server, deactivate when convenient
-5. ~~Consolidate OAuth credentials (Suite + Live Sync)~~ ✅ Done — live-sync falls back to Suite creds
-6. Deactivate `gg-ebay-throttle` plugin on live server
-7. Consolidate `gg-price-watch` and eBay Suite snapshot engine (pick one, retire the other)
-8. SEO and traffic growth
-9. eBay to website customer conversion
-10. SaaS productisation of this stack (longer term)
+4. ~~Remove `gg-ebay-throttle.php` from repo (redundant)~~ ✅ Done
+5. ~~Consolidate OAuth credentials (Suite + Live Sync)~~ ✅ Done
+6. ~~Enable LiteSpeed Cache + set TTLs~~ ✅ Done — TTFB dropped from 7-13s to 0.5-1s for visitors
+7. ~~Add progressive rendering to Singles page template~~ ✅ Done in repo — **needs pasting into Elementor HTML widget to go live**
+8. ~~Deploy `gg-performance.php` frontend optimiser~~ ✅ Done — ~40 fewer requests for visitors
+9. Update Singles page in Elementor with progressive rendering from `/page-templates/singles.php`
+10. Fix Cloudflare 503s on search assets and FB open-bridge (WAF rule or path change)
+11. Investigate AVIF not serving on product pages
+12. Deactivate `gg-ebay-throttle` plugin on live server
+13. Consolidate `gg-price-watch` and eBay Suite snapshot engine (pick one, retire the other)
+14. SEO and traffic growth
+15. eBay to website customer conversion
+16. SaaS productisation of this stack (longer term)
 
 ## Page Design Workflow (Elementor)
 Page designs (homepage, singles, category pages etc.) are built using **Elementor HTML widgets** containing custom HTML/CSS/JS. They are **not deployed via the GitHub pipeline** — they live in the WordPress database.
@@ -101,6 +111,56 @@ Page designs (homepage, singles, category pages etc.) are built using **Elemento
 **Important:** The `/page-templates/` folder in this repo is a reference copy only — it is NOT what's live on the site. The live version is always what's in Elementor. Always extract fresh from Elementor before editing, not from the repo file.
 
 **Why not native Elementor widgets?** The animated sections (RC5 sparkler banner, Blazing Dominion ember effects, sales ticker, custom search) require custom JavaScript/canvas that cannot be built with native Elementor widgets. Rebuilding natively would lose these effects. HTML widgets are the right approach for this stack.
+
+## Performance
+
+### LiteSpeed Cache (configured 2026-04-07)
+Was completely disabled with all TTLs at 0. Now enabled:
+- **Enable Cache:** ON
+- **Cache Mobile:** ON
+- **Cache REST API:** ON (sales ticker, search, cart endpoints)
+- **Serve Stale:** ON (serves old cache while rebuilding — prevents slow loads)
+- **Browser Cache:** ON (30 days for static assets)
+- **Public TTL:** 604800 (7 days) — product and category pages
+- **Front Page TTL:** 43200 (12 hours) — homepage with sales ticker
+- **REST TTL:** 3600 (1 hour) — API endpoints
+- **Cache Logged-in Users:** OFF (admin sees live changes)
+
+**Note:** When stock/prices update via eBay sync, LiteSpeed auto-purges affected product pages. If stale data appears after a sync, use the ⚡ Purge All button in the WP admin bar.
+
+### Performance Benchmarks (2026-04-07)
+| Page | TTFB Before | TTFB After (cached) | Improvement |
+|------|-------------|---------------------|-------------|
+| RC5 (619 products) | 7.7s | 1.0s | 7.4x faster |
+| Singles (837 products) | 11.4s | 0.58s | 19.7x faster |
+| Homepage | 1.8s | 1.0s | 1.7x faster |
+
+### PageSpeed Mobile Scores (2026-04-07)
+| Page | Score | FCP | LCP | TBT | Notes |
+|------|-------|-----|-----|-----|-------|
+| Homepage | 84 | 0.5s | 2.6s | 10ms | Good |
+| RC5 | 62 | 0.5s | 2.3s | 540ms | TBT from 619 DOM nodes |
+| Singles | 31 | 4.4s | 16.7s | 1,590ms | All 837 cards render at once — progressive render in repo but not yet applied in Elementor |
+
+### Progressive Rendering Pattern
+Category pages with many products use a batch-reveal pattern:
+1. First 48 products visible immediately
+2. Remaining products hidden with `data-deferred="true"` and `display: none`
+3. IntersectionObserver watches a sentinel div at the bottom of the grid
+4. When sentinel enters viewport (with 300px margin), next batch of 48 is revealed
+5. When filters are applied, `ggRevealAll()` reveals all products for filtering
+6. When filters are cleared, `ggResetProgressiveRender()` re-hides and resets
+
+Currently live on RC5 page. Committed to repo for Singles (`/page-templates/singles.php`) — needs pasting into Elementor to go live.
+
+### Frontend Optimiser (`gg-performance.php`)
+Strips ~40 unnecessary frontend resources for non-admin visitors:
+- Google Site Kit: 26 JS files removed (admin dashboard preserved)
+- WordPress emoji: JS + 6 SVG requests removed
+- Payment gateway CSS: Stripe, PayPal, WC blocks removed from non-checkout pages
+- Elementor notes module: removed for non-admins
+- jQuery Migrate: removed (not needed with jQuery 3.7)
+- WPForms/WP Mail SMTP admin bar CSS: removed for non-admins
 
 ## Post-Deploy Setup (One-Time)
 After the 2026-04-07 security update, these wp_options must be set manually (via WP-CLI, cPanel terminal, or a one-time PHP snippet):
