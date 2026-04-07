@@ -1,37 +1,31 @@
 <?php
 /*
 Plugin Name: GrimeGames Performance Optimiser
-Description: Strips frontend bloat for visitors — Site Kit JS, emoji, payment CSS, deferred non-critical CSS, delayed Facebook Pixel, DNS prefetch. Admin functionality preserved.
+Description: Strips frontend bloat for visitors — Site Kit JS, emoji, payment CSS/JS, WP block editor packages, deferred non-critical CSS, delayed Facebook Pixel, DNS prefetch. Admin functionality preserved. Debug at ?gg_perf_debug=1
 Author: GrimeGames
-Version: 2.0
+Version: 3.0
 */
 
 defined('ABSPATH') || exit;
 
+
 /* =========================
    1. GOOGLE SITE KIT — Block frontend JS for non-admin users
-   Site Kit admin dashboard stays fully functional.
-   Only the 26 JS files that load on every frontend page are removed.
    ========================= */
 add_action('wp_enqueue_scripts', function() {
-    // Only strip on frontend, never in admin
     if (is_admin()) return;
-    // Keep scripts for admins so Site Kit's admin bar widget still works
     if (current_user_can('manage_options')) return;
 
     global $wp_scripts;
     if (!$wp_scripts) return;
 
-    $blocked = 0;
     foreach ($wp_scripts->registered as $handle => $script) {
         if ($script->src && strpos($script->src, 'google-site-kit') !== false) {
             wp_dequeue_script($handle);
             wp_deregister_script($handle);
-            $blocked++;
         }
     }
 
-    // Also remove Site Kit's inline styles
     global $wp_styles;
     if ($wp_styles) {
         foreach ($wp_styles->registered as $handle => $style) {
@@ -46,7 +40,6 @@ add_action('wp_enqueue_scripts', function() {
 
 /* =========================
    2. DISABLE WP EMOJI — Removes emoji JS + 6 SVG requests
-   Emojis still work via browser native rendering.
    ========================= */
 add_action('init', function() {
     remove_action('wp_head', 'print_emoji_detection_script', 7);
@@ -71,36 +64,83 @@ add_action('init', function() {
 
 
 /* =========================
-   3. PAYMENT GATEWAY CSS — Only load on checkout/cart pages
-   Stripe, PayPal CSS removed from homepage/product pages.
+   3. PAYMENT GATEWAY CSS + JS — Only load on checkout/cart pages
+   Exact handle names from live site audit 2026-04-07.
    ========================= */
 add_action('wp_enqueue_scripts', function() {
     if (is_admin()) return;
 
-    // Only load payment CSS on checkout and cart pages
     $is_payment_page = (function_exists('is_checkout') && is_checkout())
-                    || (function_exists('is_cart') && is_cart())
-                    || (function_exists('is_account_page') && is_account_page());
+                    || (function_exists('is_cart') && is_cart());
 
     if (!$is_payment_page) {
-        // Stripe
-        wp_dequeue_style('wc-gateway-stripe-upe-blocks');
-        wp_dequeue_style('stripe_styles');
-        // PayPal
-        wp_dequeue_style('ppcp-local-alternative-payment-methods-css-gateway');
-        wp_dequeue_style('ppcp-webhooks-status-page-style');
-        // WooCommerce blocks (cart/checkout only)
+        // === PAYMENT CSS (exact handles from live audit) ===
+        wp_dequeue_style('wc-stripe-blocks-checkout-style');
+        wp_dequeue_style('stripelink_styles');
+        wp_dequeue_style('wc_stripe_express_checkout_style');
+        wp_dequeue_style('wc-stripe-upe-classic');
+        wp_dequeue_style('ppcp-pwc-payment-method');
         wp_dequeue_style('wc-blocks-style');
+        wp_dequeue_style('gateway');
+
+        // === PAYMENT JS ===
+        wp_dequeue_script('stripe');
+        wp_dequeue_script('wc-stripe-upe-classic');
+        wp_dequeue_script('wc_stripe_express_checkout');
+        wp_dequeue_script('ppcp-smart-button');
+        wp_dequeue_script('ppcp-fraudnet');
+        wp_dequeue_script('wcpay-frontend-tracks');
+
+        // === WP BLOCK EDITOR PACKAGES (React tree for payment buttons) ===
+        wp_dequeue_script('react');
+        wp_dequeue_script('react-dom');
+        wp_dequeue_script('react-jsx-runtime');
+        wp_dequeue_script('lodash');
+        wp_dequeue_script('wp-data');
+        wp_dequeue_script('wp-element');
+        wp_dequeue_script('wp-compose');
+        wp_dequeue_script('wp-deprecated');
+        wp_dequeue_script('wp-dom');
+        wp_dequeue_script('wp-dom-ready');
+        wp_dequeue_script('wp-escape-html');
+        wp_dequeue_script('wp-html-entities');
+        wp_dequeue_script('wp-is-shallow-equal');
+        wp_dequeue_script('wp-keycodes');
+        wp_dequeue_script('wp-polyfill');
+        wp_dequeue_script('wp-priority-queue');
+        wp_dequeue_script('wp-private-apis');
+        wp_dequeue_script('wp-redux-routine');
+        wp_dequeue_script('wp-url');
+        wp_dequeue_script('wp-api-fetch');
+    }
+
+    // Strip Stripe Link CSS from My Account too
+    if (function_exists('is_account_page') && is_account_page()) {
+        wp_dequeue_style('stripelink_styles');
+        wp_dequeue_style('wc_stripe_express_checkout_style');
     }
 }, 100);
 
 
 /* =========================
-   4. POST VIEWS COUNTER — Only load CSS when carousel is present
+   4. STRIP WC CHECKOUT JS FROM NON-CHECKOUT PAGES
    ========================= */
 add_action('wp_enqueue_scripts', function() {
     if (is_admin()) return;
-    // PVC frontend CSS is tiny but unnecessary on non-homepage pages
+    if (function_exists('is_checkout') && is_checkout()) return;
+
+    wp_dequeue_script('wc-checkout');
+    wp_dequeue_script('wc-address-i18n');
+    wp_dequeue_script('wc-country-select');
+    wp_dequeue_script('wc-custom-place-order-button');
+}, 100);
+
+
+/* =========================
+   5. POST VIEWS COUNTER — Only load CSS on homepage
+   ========================= */
+add_action('wp_enqueue_scripts', function() {
+    if (is_admin()) return;
     if (!is_front_page() && !is_home()) {
         wp_dequeue_style('post-views-counter-frontend');
     }
@@ -108,7 +148,7 @@ add_action('wp_enqueue_scripts', function() {
 
 
 /* =========================
-   5. ELEMENTOR — Disable frontend notes module (admin-only feature)
+   6. ELEMENTOR — Disable frontend notes module (admin-only)
    ========================= */
 add_action('wp_enqueue_scripts', function() {
     if (is_admin()) return;
@@ -121,8 +161,7 @@ add_action('wp_enqueue_scripts', function() {
 
 
 /* =========================
-   6. JQUERY MIGRATE — Not needed with modern jQuery 3.7
-   WooCommerce and Elementor don't require it.
+   7. JQUERY MIGRATE — Not needed with jQuery 3.7
    ========================= */
 add_action('wp_default_scripts', function($scripts) {
     if (is_admin()) return;
@@ -134,8 +173,7 @@ add_action('wp_default_scripts', function($scripts) {
 
 
 /* =========================
-   7. WPFORMS LITE + WP MAIL SMTP — Remove admin bar CSS on frontend
-   These tiny CSS files still add HTTP requests.
+   8. WPFORMS LITE + WP MAIL SMTP — Remove admin bar CSS
    ========================= */
 add_action('wp_enqueue_scripts', function() {
     if (is_admin()) return;
@@ -147,8 +185,7 @@ add_action('wp_enqueue_scripts', function() {
 
 
 /* =========================
-   8. FACEBOOK PIXEL — Delay loading until user interaction or 3 seconds
-   Pixel fires after the page is interactive, not blocking initial render.
+   9. FACEBOOK PIXEL — Delay until interaction or 3 seconds
    ========================= */
 add_action('wp_head', function() {
     if (is_admin() || current_user_can('manage_options')) return;
@@ -167,7 +204,6 @@ add_action('wp_head', function() {
             fbq('init', '1402118877864570');
             fbq('track', 'PageView');
         }
-        // Load on first interaction or after 3 seconds, whichever is first
         var events = ['mouseover', 'keydown', 'touchstart', 'scroll'];
         events.forEach(function(e) {
             document.addEventListener(e, loadFBPixel, { once: true, passive: true });
@@ -178,7 +214,6 @@ add_action('wp_head', function() {
     <?php
 }, 1);
 
-// Block the default FB pixel script if a plugin adds it (prevent double-loading)
 add_action('wp_enqueue_scripts', function() {
     if (is_admin() || current_user_can('manage_options')) return;
     wp_dequeue_script('facebook-for-woocommerce-pixel');
@@ -187,38 +222,33 @@ add_action('wp_enqueue_scripts', function() {
 
 
 /* =========================
-   9. DEFER NON-CRITICAL CSS
-   Loads non-essential CSS asynchronously using the print/onload trick.
-   Critical CSS (above-the-fold) loads normally.
+   10. DEFER NON-CRITICAL CSS
    ========================= */
 add_filter('style_loader_tag', function($html, $handle, $href, $media) {
     if (is_admin()) return $html;
     if (current_user_can('manage_options')) return $html;
 
-    // CSS that can be deferred (not needed for above-fold rendering)
     $defer_styles = [
-        'elementor-icons',           // Icon font CSS - only needed when icons render
-        'elementor-common',          // Elementor admin-facing styles
-        'elementor-pro-notes',       // Elementor notes (admin only)
-        'google-site-kit',           // Site Kit admin bar styles
-        'dashicons',                 // WordPress admin dashicons
-        'admin-bar',                 // Admin bar (still loads for logged-in but rarely needed on paint)
-        'post-views-counter-frontend', // Post views CSS
-        'wc-gateway-stripe-upe-blocks', // Stripe checkout CSS
-        'ppcp-local-alternative-payment-methods', // PayPal checkout CSS
-        'wc-blocks-style',           // WooCommerce blocks CSS
+        'elementor-icons',
+        'elementor-common',
+        'elementor-pro-notes',
+        'google-site-kit',
+        'dashicons',
+        'post-views-counter-frontend',
+        'wc-blocks-style',
+        'photoswipe',
+        'photoswipe-default-skin',
+        'wp-block-library',
     ];
 
     foreach ($defer_styles as $pattern) {
         if (strpos($handle, $pattern) !== false) {
-            // Replace with async loading: loads as print media (non-blocking), then switches to all
             $html = str_replace(
                 "media='all'",
                 "media='print' onload=\"this.media='all'\"",
                 $html
             );
-            // Also handle cases where media attribute isn't 'all'
-            if (strpos($html, "onload") === false) {
+            if (strpos($html, 'onload') === false) {
                 $html = str_replace(
                     '/>',
                     "media='print' onload=\"this.media='all'\" />",
@@ -234,8 +264,7 @@ add_filter('style_loader_tag', function($html, $handle, $href, $media) {
 
 
 /* =========================
-   10. DNS PREFETCH + PRECONNECT for third-party origins
-   Reduces connection setup time for external resources.
+   11. DNS PREFETCH + PRECONNECT
    ========================= */
 add_action('wp_head', function() {
     if (is_admin()) return;
@@ -247,22 +276,120 @@ add_action('wp_head', function() {
 
 
 /* =========================
-   11. ADD DEFER/ASYNC to non-critical scripts
+   12. ADD DEFER TO NON-CRITICAL SCRIPTS
    ========================= */
 add_filter('script_loader_tag', function($tag, $handle, $src) {
-    // Critical scripts that Rocket Loader should not defer
-    $critical = ['jquery-core', 'woocommerce', 'wc-add-to-cart'];
+    if (is_admin()) return $tag;
+
+    // Critical — tell Rocket Loader not to defer
+    $critical = ['jquery-core', 'woocommerce', 'wc-add-to-cart', 'wc-cart-fragments'];
     if (in_array($handle, $critical)) {
         $tag = str_replace('<script ', '<script data-cfasync="false" ', $tag);
+        return $tag;
     }
+
+    // Deferrable
+    $deferrable = [
+        'astra-theme-js',
+        'astra-mobile-cart',
+        'sourcebuster-js',
+        'wc-order-attribution',
+        'comment-reply',
+        'wp-hooks',
+        'wp-i18n',
+    ];
+    if (in_array($handle, $deferrable) && strpos($tag, 'defer') === false) {
+        $tag = str_replace('<script ', '<script defer ', $tag);
+    }
+
     return $tag;
 }, 10, 3);
 
 
 /* =========================
-   DEBUG: Log what was removed (only when ?gg_perf_debug=1)
+   13. REMOVE CART FRAGMENTS FROM NON-SHOP PAGES
+   ========================= */
+add_action('wp_enqueue_scripts', function() {
+    if (is_admin()) return;
+    if (is_shop() || is_product() || is_product_category() || is_product_tag()) return;
+    if (function_exists('is_cart') && is_cart()) return;
+    if (function_exists('is_checkout') && is_checkout()) return;
+    if (is_front_page() || is_home()) return;
+
+    wp_dequeue_script('wc-cart-fragments');
+}, 100);
+
+
+/* =========================
+   14. REMOVE WP BLOCK LIBRARY CSS
+   Elementor site doesn't use Gutenberg blocks on frontend.
+   ========================= */
+add_action('wp_enqueue_scripts', function() {
+    if (is_admin()) return;
+    wp_dequeue_style('wp-block-library');
+    wp_dequeue_style('wp-block-library-theme');
+    wp_dequeue_style('wc-blocks-vendors-style');
+    wp_dequeue_style('global-styles');
+}, 100);
+
+
+/* =========================
+   15. REMOVE COMMENT-REPLY JS
+   ========================= */
+add_action('wp_enqueue_scripts', function() {
+    if (is_admin()) return;
+    if (!is_singular() || !comments_open()) {
+        wp_dequeue_script('comment-reply');
+    }
+}, 100);
+
+
+/* =========================
+   16. DISABLE SOURCEBUSTER + ORDER ATTRIBUTION on non-checkout
+   ========================= */
+add_action('wp_enqueue_scripts', function() {
+    if (is_admin()) return;
+    if (function_exists('is_checkout') && is_checkout()) return;
+
+    wp_dequeue_script('sourcebuster-js');
+    wp_dequeue_script('wc-order-attribution');
+}, 100);
+
+
+/* =========================
+   DEBUG: Performance audit when ?gg_perf_debug=1
    ========================= */
 add_action('wp_footer', function() {
     if (!isset($_GET['gg_perf_debug']) || !current_user_can('manage_options')) return;
-    echo '<!-- GG Performance Optimiser active. Append ?gg_perf_debug=1 to see this. -->';
+
+    global $wp_scripts, $wp_styles;
+    $scripts_list = [];
+    $styles_list = [];
+
+    if ($wp_scripts) {
+        foreach ($wp_scripts->done as $handle) {
+            $src = isset($wp_scripts->registered[$handle]) ? $wp_scripts->registered[$handle]->src : '(inline)';
+            $scripts_list[] = "{$handle}: {$src}";
+        }
+    }
+    if ($wp_styles) {
+        foreach ($wp_styles->done as $handle) {
+            $src = isset($wp_styles->registered[$handle]) ? $wp_styles->registered[$handle]->src : '(inline)';
+            $styles_list[] = "{$handle}: {$src}";
+        }
+    }
+
+    $sc = count($scripts_list);
+    $stc = count($styles_list);
+
+    echo '<div style="position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;color:#0f0;font-family:monospace;font-size:11px;padding:15px;z-index:99999;max-height:400px;overflow:auto;border-top:2px solid #e94560;">';
+    echo '<strong style="color:#e94560;">⚡ GG Performance v3.0 Debug</strong><br>';
+    echo "Scripts loaded: {$sc} | Styles loaded: {$stc}<br>";
+    echo '<details><summary style="color:#fff;cursor:pointer;">Scripts (' . $sc . ')</summary>';
+    foreach ($scripts_list as $s) echo esc_html($s) . '<br>';
+    echo '</details>';
+    echo '<details><summary style="color:#fff;cursor:pointer;">Styles (' . $stc . ')</summary>';
+    foreach ($styles_list as $s) echo esc_html($s) . '<br>';
+    echo '</details>';
+    echo '</div>';
 }, 9999);
