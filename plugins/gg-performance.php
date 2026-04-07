@@ -440,3 +440,43 @@ add_action('wp_footer', function() {
     echo '</details>';
     echo '</div>';
 }, 9999);
+
+
+/* =========================
+   17. AVIF HTML REWRITING
+   LiteSpeed serves static files directly, bypassing .htaccess rewrites.
+   Instead, rewrite image URLs in the HTML output to point to .avif files
+   when the browser supports AVIF and the .avif file exists on disk.
+   ========================= */
+add_action('template_redirect', function() {
+    if (is_admin()) return;
+    // Only rewrite if browser sends Accept: image/avif
+    if (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'image/avif') === false) return;
+
+    ob_start(function($html) {
+        if (empty($html)) return $html;
+
+        // Rewrite src="...uploads/...jpg" and srcset entries to .avif
+        $html = preg_replace_callback(
+            '#((?:src|srcset)\s*=\s*["\'])([^"\']*?/wp-content/uploads/[^"\']*?)\.(jpe?g|png|gif|webp)(["\'\s,])#i',
+            function($matches) {
+                $prefix    = $matches[1];
+                $path      = $matches[2];
+                $ext       = $matches[3];
+                $suffix    = $matches[4];
+
+                // Build filesystem path to check if .avif exists
+                $rel_path  = preg_replace('#^https?://[^/]+#', '', $path);
+                $avif_file = ABSPATH . ltrim($rel_path, '/') . '.avif';
+
+                if (file_exists($avif_file)) {
+                    return $prefix . $path . '.avif' . $suffix;
+                }
+                return $matches[0];
+            },
+            $html
+        );
+
+        return $html;
+    });
+}, 1);
