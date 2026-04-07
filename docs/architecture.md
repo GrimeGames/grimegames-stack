@@ -129,7 +129,7 @@ This is a legacy monolith plugin (~v3.8) that lives on the server but is **not y
 | `gg_token_app()` | suite internals | Returns current app OAuth token |
 | `gg_snapshot_revise_price_on_ebay()` | gg-snapshot-mobile (self) | Revises price on eBay — defined in gg-snapshot-mobile.php itself with a `function_exists` guard, NOT in ebay-suite |
 
-**TODO:** This file should be committed to the repo as a priority. Until then, any plugin that calls its functions will silently fail if the suite plugin is deactivated.
+**TODO:** This file is now committed to the repo at `/plugins/Grimegames-ebay-suite.php`. Until, any plugin that calls its functions will silently fail if the suite plugin is deactivated.
 
 ---
 
@@ -153,3 +153,4 @@ Both plugins modify WooCommerce stock independently:
 - **Stock management:** All products use `_manage_stock = yes`
 - **Pricing:** WooCommerce price is kept 5% below eBay price (set by `gg-ebay-webhooks` on `ItemRevised` events)
 - **Individual listings per rarity:** Variable products are NOT used — each rarity variant is a separate WooCommerce product. This is required for the JS filter architecture on category pages.
+
