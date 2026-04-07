@@ -1185,9 +1185,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   updateProductCount();
+  if (typeof ggInitProgressiveRender === "function") ggInitProgressiveRender();
 });
 
 function applyFilters() {
+  // Reveal all deferred products before filtering (progressive render integration)
+  if (typeof ggRevealAll === "function") ggRevealAll();
   const products = document.querySelectorAll('.woocommerce ul.products li.product');
   
   const selectedRarities = [];
@@ -1267,8 +1270,12 @@ function clearAllFilters() {
   document.querySelectorAll('.set-filters input[type="checkbox"]').forEach(cb => cb.checked = false);
   document.querySelectorAll('.price-filters input[type="checkbox"]').forEach(cb => cb.checked = false);
   document.getElementById('sort-select').value = 'best-selling';
-  document.querySelectorAll('.woocommerce ul.products li.product').forEach(product => { product.style.display = 'block'; });
-  updateProductCount();
+  if (typeof ggResetProgressiveRender === "function") {
+    ggResetProgressiveRender();
+  } else {
+    document.querySelectorAll('.woocommerce ul.products li.product').forEach(product => { product.style.display = 'block'; });
+    updateProductCount();
+  }
 }
 
 function updateProductCount() {
@@ -1381,4 +1388,86 @@ function clearAllFiltersMobile() {
   document.querySelectorAll('.set-filters input[type="checkbox"]').forEach(cb => cb.checked = false);
   applyFilters();
 }
+
+/* ── PROGRESSIVE RENDERING ── */
+/* Shows first 48 products immediately, reveals more as user scrolls. */
+/* When filters are applied, all products are revealed for filtering. */
+/* When filters are cleared, progressive render resets to show 48 again. */
+(function() {
+    var BATCH_SIZE = 48;
+    var allProducts = [];
+    var isFiltered = false;
+    var sentinel = null;
+    var observer = null;
+
+    window.ggInitProgressiveRender = function() {
+        allProducts = Array.from(document.querySelectorAll('.woocommerce ul.products li.product'));
+        if (allProducts.length === 0) return;
+
+        allProducts.forEach(function(p, i) {
+            if (i >= BATCH_SIZE) {
+                p.setAttribute('data-deferred', 'true');
+                p.style.display = 'none';
+            }
+        });
+
+        var container = document.querySelector('.woocommerce ul.products');
+        if (!container) return;
+        sentinel = document.createElement('div');
+        sentinel.id = 'gg-sentinel';
+        sentinel.style.cssText = 'width:100%;height:1px;grid-column:1/-1;';
+        container.appendChild(sentinel);
+
+        observer = new IntersectionObserver(function(entries) {
+            if (entries[0].isIntersecting && !isFiltered) revealNextBatch();
+        }, { rootMargin: '300px' });
+        observer.observe(sentinel);
+
+        updateProductCount();
+    };
+
+    function revealNextBatch() {
+        var deferred = allProducts.filter(function(p) {
+            return p.getAttribute('data-deferred') === 'true';
+        });
+        if (deferred.length === 0) { if (observer) observer.disconnect(); return; }
+        deferred.slice(0, BATCH_SIZE).forEach(function(p) {
+            p.style.display = 'block';
+            p.removeAttribute('data-deferred');
+        });
+        updateProductCount();
+    }
+
+    window.ggRevealAll = function() {
+        isFiltered = true;
+        if (observer) observer.disconnect();
+        allProducts.forEach(function(p) {
+            p.removeAttribute('data-deferred');
+            p.style.display = 'block';
+        });
+    };
+
+    window.ggResetProgressiveRender = function() {
+        isFiltered = false;
+        allProducts = Array.from(document.querySelectorAll('.woocommerce ul.products li.product'));
+        allProducts.forEach(function(p, i) {
+            if (i >= BATCH_SIZE) {
+                p.setAttribute('data-deferred', 'true');
+                p.style.display = 'none';
+            } else {
+                p.removeAttribute('data-deferred');
+                p.style.display = 'block';
+            }
+        });
+        var container = document.querySelector('.woocommerce ul.products');
+        if (container && sentinel) {
+            container.appendChild(sentinel);
+            observer = new IntersectionObserver(function(entries) {
+                if (entries[0].isIntersecting && !isFiltered) revealNextBatch();
+            }, { rootMargin: '300px' });
+            observer.observe(sentinel);
+        }
+        updateProductCount();
+    };
+})();
 </script>
