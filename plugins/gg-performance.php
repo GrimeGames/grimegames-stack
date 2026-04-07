@@ -284,6 +284,14 @@ add_filter('style_loader_tag', function($html, $handle, $href, $media) {
         'photoswipe',
         'photoswipe-default-skin',
         'wp-block-library',
+        // PageSpeed flagged render-blocking (1,210ms savings):
+        'gg-ajax-search',           // search.css — 40.7KB, not needed for first paint
+        'woocommerce-grid',         // woocommerce-grid.min.css
+        'woocommerce-layout',       // woocommerce-layout-grid.min.css
+        'woocommerce-smallscreen',  // woocommerce-smallscreen-grid.min.css
+        'elementor-frontend',       // frontend.min.css — 7.3KB
+        'wc-stripe-blocks',         // upe-blocks.css
+        'ppcp-',                    // PayPal CSS
     ];
 
     foreach ($defer_styles as $pattern) {
