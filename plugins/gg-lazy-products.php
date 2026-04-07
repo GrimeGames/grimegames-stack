@@ -139,3 +139,139 @@ function gg_lazy_products_endpoint($request) {
         'products' => $products,
     ], 200);
 }
+
+
+/* =========================
+   LIMIT INITIAL PRODUCTS ON SINGLES/CATEGORY PAGES
+   Intercepts the WooCommerce product query on heavy pages
+   to only render the first 48 products server-side.
+   The rest are loaded via AJAX from /wp-json/gg/v1/products.
+   ========================= */
+add_action('pre_get_posts', function($query) {
+    // Only on frontend, main query, for our specific heavy pages
+    if (is_admin() || !$query->is_main_query()) return;
+
+    // Identify pages that need lazy loading
+    $lazy_pages = [332]; // Singles page ID
+    
+    // Also apply to product_cat archives with many products
+    if ($query->is_tax('product_cat')) {
+        // Will be handled below
+    } elseif (!is_page($lazy_pages)) {
+        return;
+    }
+
+    // Limit to 48 products for initial server render
+    $query->set('posts_per_page', 48);
+});
+
+// For Elementor pages using [products] shortcode, hook into the shortcode query
+add_filter('woocommerce_shortcode_products_query', function($query_args, $atts, $type) {
+    // Check if we're on a page that should lazy-load
+    if (is_page(332)) { // Singles page
+        $query_args['posts_per_page'] = 48;
+    }
+    return $query_args;
+}, 10, 3);
+
+// Also limit the Astra shop loop if it's rendering all products
+add_filter('loop_shop_per_page', function($cols) {
+    // Only limit on the specific heavy pages
+    if (is_page(332)) {
+        return 48;
+    }
+    return $cols;
+});
+
+
+/* =========================
+   INJECT AJAX LOADER SCRIPT
+   Adds the lazy loading JavaScript to pages with product grids.
+   ========================= */
+add_action('wp_footer', function() {
+    if (is_admin()) return;
+    // Only inject on pages that have lazy-loaded products
+    if (!is_page(332) && !is_product_category()) return;
+    
+    $category = 'singles'; // default
+    if (is_page() && get_the_ID() === 332) {
+        $category = 'singles';
+    }
+    ?>
+    <script id="gg-lazy-loader">
+    (function() {
+        var grid = document.querySelector("ul.products");
+        if (!grid) return;
+
+        // Detect category from URL
+        var category = "<?php echo esc_js($category); ?>";
+        var path = window.location.pathname;
+        if (path.includes("rarity-collection")) category = "rc05";
+        if (path.includes("blazing-dominion")) category = "blazing-dominion";
+        if (path.includes("burst-protocol")) category = "burst-protocol";
+
+        // Get IDs of products already in the DOM
+        var existingIds = new Set();
+        grid.querySelectorAll("li").forEach(function(li) {
+            var btn = li.querySelector("[data-product_id]");
+            if (btn) existingIds.add(parseInt(btn.getAttribute("data-product_id")));
+        });
+
+        console.log("GG Lazy: " + existingIds.size + " products already in DOM, fetching rest...");
+
+        fetch("/wp-json/gg/v1/products?category=" + category + "&limit=1000", {
+            headers: {"Accept": "application/json, image/avif"}
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.products) return;
+
+            var fragment = document.createDocumentFragment();
+            var added = 0;
+
+            data.products.forEach(function(p) {
+                if (existingIds.has(p.id)) return;
+
+                var li = document.createElement("li");
+                li.className = "ast-article-single desktop-align-left tablet-align-left mobile-align-left product type-product instock product_cat-singles has-post-thumbnail purchasable product-type-simple";
+                li.setAttribute("data-deferred", "true");
+                li.style.display = "none";
+
+                li.innerHTML =
+                    '<div class="astra-shop-thumbnail-wrap">' +
+                    '<a href="' + p.url + '" class="woocommerce-LoopProduct-link woocommerce-loop-product__link">' +
+                    '<img loading="lazy" decoding="async" width="300" height="300" src="' + p.img + '" class="attachment-woocommerce_thumbnail size-woocommerce_thumbnail" alt="' + p.name.replace(/"/g, '&quot;') + '">' +
+                    '</a></div>' +
+                    '<div class="astra-shop-summary-wrap">' +
+                    '<a href="' + p.url + '" class="ast-loop-product__link"><h2 class="woocommerce-loop-product__title">' + p.name + '</h2></a>' +
+                    '<span class="price">' + p.display + '</span>' +
+                    '<a href="?add-to-cart=' + p.id + '" data-quantity="1" class="ast-on-card-button ast-select-options-trigger product_type_simple add_to_cart_button ajax_add_to_cart" data-product_id="' + p.id + '" data-product_sku="' + (p.sku || '') + '" rel="nofollow">Add to basket</a>' +
+                    '</div>';
+
+                fragment.appendChild(li);
+                added++;
+            });
+
+            grid.appendChild(fragment);
+
+            // Trigger the existing progressive rendering system
+            if (typeof ggResetProgressiveRender === "function") {
+                ggResetProgressiveRender();
+            }
+
+            // Update product count if visible
+            document.querySelectorAll("*").forEach(function(el) {
+                if (el.childNodes.length === 1 && /^\d+ products$/.test(el.textContent.trim())) {
+                    el.textContent = data.total + " products";
+                }
+            });
+
+            console.log("GG Lazy: added " + added + " products via API (" + data.total + " total)");
+        })
+        .catch(function(err) {
+            console.error("GG Lazy Loader error:", err);
+        });
+    })();
+    </script>
+    <?php
+}, 99);
