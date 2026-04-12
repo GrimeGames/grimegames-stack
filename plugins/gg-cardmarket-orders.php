@@ -662,6 +662,19 @@ function gg_cm_admin_page() {
         }
     }
 
+    // Handle delete order
+    if (isset($_POST['gg_cm_delete_order']) && check_admin_referer('gg_cm_delete_order')) {
+        $order_id = intval($_POST['order_id']);
+        $order = $wpdb->get_row($wpdb->prepare("SELECT cm_order_id FROM $table WHERE id = %d", $order_id));
+        $deleted = $wpdb->delete($table, ['id' => $order_id], ['%d']);
+        if ($deleted) {
+            $cm_id = $order ? $order->cm_order_id : $order_id;
+            echo '<div class="notice notice-success"><p>🗑️ Order #' . esc_html($cm_id) . ' deleted.</p></div>';
+        } else {
+            echo '<div class="notice notice-error"><p>❌ Could not delete order.</p></div>';
+        }
+    }
+
     $orders        = $wpdb->get_results("SELECT * FROM $table ORDER BY created_at DESC LIMIT 100");
     $pending_count = $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE status = 'pending'");
 
@@ -832,9 +845,20 @@ function gg_cm_admin_page() {
                         <div class="gg-cm-card-id">#<?php echo esc_html($order->cm_order_id); ?></div>
                         <div class="gg-cm-card-date"><?php echo esc_html(date('d/m/y H:i', strtotime($order->created_at))); ?></div>
                     </div>
-                    <span class="gg-cm-badge" style="<?php echo $status_style; ?>">
-                        <?php echo esc_html($order->status === 'label_generated' ? 'Label Ready' : ucfirst($order->status)); ?>
-                    </span>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="gg-cm-badge" style="<?php echo $status_style; ?>">
+                            <?php echo esc_html($order->status === 'label_generated' ? 'Label Ready' : ucfirst($order->status)); ?>
+                        </span>
+                        <form method="post" style="margin:0;" onsubmit="return confirm('Delete order #<?php echo esc_js($order->cm_order_id); ?>?');">
+                            <?php wp_nonce_field('gg_cm_delete_order'); ?>
+                            <input type="hidden" name="order_id" value="<?php echo esc_attr($order->id); ?>">
+                            <button type="submit" name="gg_cm_delete_order" value="1"
+                                style="background:none;border:1px solid rgba(239,68,68,0.3);color:#ef4444;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all 0.2s;"
+                                onmouseover="this.style.background='#ef4444';this.style.color='#fff';"
+                                onmouseout="this.style.background='none';this.style.color='#ef4444';"
+                                title="Delete this order">✕</button>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- Card body -->
