@@ -3,7 +3,12 @@
 Plugin Name: GrimeGames Performance Optimiser
 Description: Strips frontend bloat for visitors — Site Kit JS, emoji, payment CSS/JS, WP block editor packages, deferred non-critical CSS, delayed Facebook Pixel, DNS prefetch. Admin functionality preserved. Debug at ?gg_perf_debug=1
 Author: GrimeGames
-Version: 3.0
+Version: 3.1
+Changelog:
+  3.1 — Removed wp-i18n from deferred scripts (broke wp-api-fetch translations).
+        Disabled wc-cart-fragments dequeue on category pages (broke side cart sync
+        when pages use WC shortcodes in Elementor instead of native archive templates).
+  3.0 — Initial consolidated performance plugin.
 */
 
 defined('ABSPATH') || exit;
@@ -349,7 +354,11 @@ add_filter('script_loader_tag', function($tag, $handle, $src) {
         'wc-order-attribution',
         'comment-reply',
         'wp-hooks',
-        'wp-i18n',
+        // NOTE: 'wp-i18n' removed 2026-04-24 — deferring it broke
+        // wp-api-fetch-js-translations which calls wp.i18n.setLocaleData()
+        // synchronously during early page load. The resulting
+        // "Cannot read properties of undefined (reading 'setLocaleData')"
+        // error halted all subsequent JS, breaking add-to-cart and side cart sync.
     ];
     if (in_array($handle, $deferrable) && strpos($tag, 'defer') === false) {
         $tag = str_replace('<script ', '<script defer ', $tag);
@@ -362,6 +371,13 @@ add_filter('script_loader_tag', function($tag, $handle, $src) {
 /* =========================
    13. REMOVE CART FRAGMENTS FROM NON-SHOP PAGES
    ========================= */
+// DISABLED 2026-04-24 — dequeueing wc-cart-fragments on category pages built
+// with Elementor + WooCommerce shortcodes (where is_product_category() returns
+// false) broke add-to-cart state sync with the side cart. The fragments script
+// is what keeps the side cart's view of the cart in sync with the server's.
+// The script is tiny — leaving it loaded everywhere is safer than trying to
+// detect every possible category/shop-shortcode page configuration.
+/*
 add_action('wp_enqueue_scripts', function() {
     if (is_admin()) return;
     if (is_shop() || is_product() || is_product_category() || is_product_tag()) return;
@@ -371,6 +387,7 @@ add_action('wp_enqueue_scripts', function() {
 
     wp_dequeue_script('wc-cart-fragments');
 }, 100);
+*/
 
 
 /* =========================
