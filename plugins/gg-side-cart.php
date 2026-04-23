@@ -1008,6 +1008,7 @@ function handleQtyChange(key, newQty) {
     state.qtyTimers[key] = setTimeout(function() {
         updateItem(key, newQty).then(function(cart) {
             render(cart);
+            initExpressCheckout(); // Refresh Apple Pay / Link total to match new cart
         }).catch(function(err) {
             console.error('[GG Cart] Update failed:', err);
             refreshCart();
@@ -1033,6 +1034,7 @@ function handleRemove(key) {
 
     removeItem(key).then(function(cart) {
         render(cart);
+        initExpressCheckout(); // Refresh Apple Pay / Link total to match new cart
         showUndoToast(itemName, key);
     }).catch(function(err) {
         console.error('[GG Cart] Remove failed:', err);
@@ -1080,6 +1082,7 @@ function handleApplyCoupon() {
 
     applyCoupon(code).then(function(cart) {
         render(cart);
+        initExpressCheckout(); // Refresh Apple Pay / Link total to match discounted cart
         $input.value   = '';
         $msg.textContent = '✓ Coupon applied!';
         $msg.className   = 'gg-coupon-ok';
@@ -1094,6 +1097,7 @@ function handleApplyCoupon() {
 function handleRemoveCoupon(code) {
     removeCoupon(code).then(function(cart) {
         render(cart);
+        initExpressCheckout(); // Refresh Apple Pay / Link total to match cart without coupon
     }).catch(function(err) {
         console.error('[GG Cart] Remove coupon failed:', err);
         refreshCart();
@@ -1109,6 +1113,7 @@ var ggStripe       = null;
 var ggEceElement   = null;
 var ggEceMounted   = false;
 var ggEceInitialised = false;
+var ggEceLastAmount = 0; // Track last mounted amount so we can detect cart changes
 
 function initExpressCheckout() {
     var $express = document.getElementById('gg-cart-express');
@@ -1119,15 +1124,26 @@ function initExpressCheckout() {
         return;
     }
 
-    // Only initialise once
+    // If already initialised, check whether cart total has changed.
+    // If it has, tear down and re-mount so Apple Pay / Link / Google Pay
+    // show the correct amount. If not, do nothing (avoids unnecessary flicker).
     if (ggEceInitialised) {
-        // Update amount if cart changed
-        if (ggEceElement && state.cart && state.cart.totals) {
-            var unit   = state.cart.totals.currency_minor_unit || 2;
-            var amount = parseInt(state.cart.totals.total_price || state.cart.totals.total_items || 0);
-            // Can't update ECE amount after mount — re-init if cart total changed
+        if (!state.cart || !state.cart.totals) return;
+
+        var currentAmount = parseInt(state.cart.totals.total_price || 0);
+
+        // Amount unchanged — nothing to do
+        if (currentAmount === ggEceLastAmount) return;
+
+        // Amount changed — tear down existing element and re-mount
+        if (ggEceElement) {
+            try { ggEceElement.unmount(); } catch(e) { /* ignore */ }
+            try { ggEceElement.destroy(); } catch(e) { /* ignore */ }
+            ggEceElement = null;
         }
-        return;
+        if ($buttons) $buttons.innerHTML = '';
+        ggEceInitialised = false;
+        // Fall through to re-initialise with new amount
     }
 
     // Load Stripe.js if not already loaded
@@ -1200,6 +1216,7 @@ function ggInitStripeEce($express, $buttons) {
             if (event.availablePaymentMethods) {
                 $express.style.display = 'block';
                 ggEceInitialised = true;
+                ggEceLastAmount = amount; // Record amount we mounted with
             } else {
                 $express.style.display = 'none';
             }
