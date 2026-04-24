@@ -369,16 +369,23 @@ function gg_handle_item_revised($product_id, $ebay_item_id, $notification) {
   }
 
   // Update price (WooCommerce always 5% below eBay price)
+  // Lock rule added 2026-04-24: automation can only DECREASE prices, never increase.
   if (isset($item_data['price']) && $item_data['price'] > 0) {
     $ebay_price  = (float) $item_data['price'];
     $woo_regular = $ebay_price;
     $woo_sale    = max(0.01, round($ebay_price * 0.95, 2));
 
-    update_post_meta($product_id, '_regular_price', $woo_regular);
-    update_post_meta($product_id, '_sale_price', $woo_sale);
-    update_post_meta($product_id, '_price', $woo_sale);
+    $current_price = (float) get_post_meta($product_id, '_price', true);
 
-    gg_webhook_log('success', "Updated price for product {$product_id}: £{$woo_regular}");
+    if ($current_price > 0 && $woo_sale >= $current_price) {
+      gg_webhook_log('info', "SKIP price update for product {$product_id}: new £{$woo_sale} >= current £{$current_price} (lock rule — automation can only decrease prices)");
+    } else {
+      update_post_meta($product_id, '_regular_price', $woo_regular);
+      update_post_meta($product_id, '_sale_price', $woo_sale);
+      update_post_meta($product_id, '_price', $woo_sale);
+
+      gg_webhook_log('success', "Updated price for product {$product_id}: sale £{$woo_sale} (was £{$current_price})");
+    }
   }
 
   // Update stock
