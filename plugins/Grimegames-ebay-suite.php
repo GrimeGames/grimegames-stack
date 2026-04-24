@@ -793,16 +793,20 @@ function gg_sync_once(){
       }
     }
 
-    // Price sync
+    // Price sync — lock rule added 2026-04-24: automation can only DECREASE prices
     if (array_key_exists('price',$it) && $it['price'] > 0) {
       $ebay_original_price = (float)$it['price'];
       $current_regular = (float)get_post_meta($pid, '_regular_price', true);
+      $current_price = (float)get_post_meta($pid, '_price', true);
       $target_regular = $ebay_original_price;
       $target_sale = max(0.01, round($ebay_original_price * 0.95, 2));
       
       $price_mismatch = (abs($current_regular - $target_regular) > 0.01);
+      $would_increase = ($current_price > 0 && $target_sale >= $current_price);
       
-      if ($price_mismatch) {
+      if ($price_mismatch && $would_increase) {
+        gg_report_add('price', sprintf("🔒 SKIP PID %d: new £%.2f >= current £%.2f (lock rule — automation can only decrease)", $pid, $target_sale, $current_price));
+      } elseif ($price_mismatch) {
         update_post_meta($pid, '_regular_price', $target_regular);
         update_post_meta($pid, '_sale_price', $target_sale);
         update_post_meta($pid, '_price', $target_sale);
@@ -937,6 +941,14 @@ add_action('admin_post_gg_manual_update_product', function() {
   $target_sale = max(0.01, round($ebay_price * 0.95, 2));
   
   $old_regular = get_post_meta($pid, '_regular_price', true);
+  $old_price = (float) get_post_meta($pid, '_price', true);
+  
+  // Lock rule added 2026-04-24: automation can only DECREASE prices
+  if ($old_price > 0 && $target_sale >= $old_price) {
+    set_transient('gg_manual_update_notice', array('type' => 'warning', 'message' => sprintf("🔒 SKIPPED: eBay price £%.2f (sale £%.2f) is not lower than current £%.2f. Automation can only decrease prices — edit manually in WooCommerce if you want to raise.", $ebay_price, $target_sale, $old_price)), 60);
+    wp_safe_redirect(admin_url('admin.php?page=gg-ebay-diagnostics'));
+    exit;
+  }
   
   update_post_meta($pid, '_regular_price', $target_regular);
   update_post_meta($pid, '_sale_price', $target_sale);
