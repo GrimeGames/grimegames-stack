@@ -19,6 +19,26 @@ GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operate
 - `/theme` — Child theme customisations and custom CSS
 - `/docs` — Architecture decisions and documentation
 
+## ⚠️ CRITICAL: Code Snippets vs Filesystem Plugins
+**Not every file in `/plugins/` is a filesystem plugin.** Some are Code Snippets (WP database entries) committed to this repo as reference copies only. Pushing changes to these files via the GitHub pipeline does NOT update the live code — but **can break the site** by creating a duplicate plugin that conflicts with the Code Snippets version.
+
+### Filesystem plugins (deploy pipeline updates these — safe to push)
+All `gg-*.php` files except those listed below.
+
+### Code Snippets plugins (deploy pipeline does NOT update these)
+- **`gg-side-cart.php`** — side cart with Stripe Express Checkout. Live version lives in WP Admin → Snippets → "GrimeGames Custom Side Cart".
+- **`gg-avif-converter.php`** — AVIF image converter. Live version in WP Admin → Snippets.
+
+To modify a Code Snippets plugin: Matt pastes the new code into WP Admin → Snippets → edit → Update. After verifying it works live, the repo reference copy can be updated to match.
+
+**What happens if you push a Code Snippets plugin via pipeline:** The deploy webhook writes the file to `wp-content/plugins/{name}/{name}.php` and WordPress activates it as a real plugin. Now BOTH versions run simultaneously, registering the same hooks and global variables, breaking the working Code Snippets version. This caused a production outage on 2026-04-23.
+
+### Pre-push checklist for any cart/payment/side-cart related code
+1. Is this a Code Snippets plugin? → If yes, paste into WP admin, do not push
+2. Syntax checked (braces, parens, JS linting)?
+3. Rollback commit SHA noted?
+4. Test plan written?
+
 ## Key Plugins
 - `gg-ebay-webhooks` — Handles eBay webhook events, stock depletion. Also contains the GitHub deploy endpoint (see Deploy Workflow below)
 - `gg-cardmarket-orders` — IMAP email parser for Cardmarket orders
@@ -46,6 +66,8 @@ GrimeGames (grimegames.com) is a UK-based Yu-Gi-Oh! TCG singles business operate
 - Facebook Pixel open-bridge (`/?ob=open-bridge/events`) returning 503 — same Cloudflare issue. Ad attribution data may be incomplete.
 - AVIF images not being served on product pages despite converter having processed ~81% of images. `.htaccess` rewrite rules may not be matching product thumbnail paths. Needs investigation.
 - `Grimegames-ebay-suite.php` is a legacy monolith plugin (v3.8). Now committed to repo at `/plugins/Grimegames-ebay-suite.php`. `gg-snapshot-mobile` depends on it
+- **Side cart Express Checkout hidden via CSS** (2026-04-24) — `#gg-cart-express { display: none }`. The side cart's Apple Pay / Google Pay / Link buttons are architecturally incomplete: they mount correctly but `stripe.confirmPayment()` is called without a `clientSecret`, failing with `IntegrationError`. No server-side PaymentIntent creation endpoint exists. Customers use cart page or checkout page Express Checkout instead (Woo's built-in integration handles those correctly). To re-enable properly: build a PHP endpoint that creates a PaymentIntent for the current cart and returns the clientSecret, add `onShippingAddressChange` handler for rate calculation, wire up order creation on `confirm`. Estimated 1-2 hours if piggybacking the Woo Stripe plugin's existing AJAX endpoints (`wc_stripe_create_payment_intent`), 3-4 hours if writing from scratch.
+
 
 ## Deploy Workflow (GitHub → Live Server)
 Changes committed to this repo under `/plugins/` are automatically deployed to the live server via a GitHub webhook.
@@ -79,6 +101,11 @@ The ACE editor does not respond to Ctrl+A as a select-all when triggered via MCP
 - Never suggest physical stock checks as a solution
 - Rarity mapping: only Prismatic Secret Rare → Secret Rare is acceptable. Ultimate Rare and Starlight Rare are distinct products
 - eBay webhook `AuctionCheckoutComplete` should be disabled — causes duplicate stock depletion alongside `FixedPriceTransaction`
+- **Code Snippets plugins (`gg-side-cart`, `gg-avif-converter`) are never pushed via the deploy pipeline.** See warning section above.
+- **Never push payment or cart code late at night without an explicit staging test plan.** Production payment outages compound: every rushed fix risks another outage.
+- **When a plugin is "fixing" symptoms, check for underlying misconfig first.** The "Fix side cart" snippet that force-enqueued `wp-api-fetch` was masking a LiteSpeed caching bug. Removing the cache of `/wp-json/wc/store` made that workaround unnecessary.
+- **LLMs (including Claude) should read this README in full before touching cart, payment, checkout, or deploy pipeline code.**
+
 
 ## Current Priorities
 1. ~~Add `gg-ajax-search` assets (search.css, search.js) to repo~~ ✅ Done
@@ -127,6 +154,23 @@ Was completely disabled with all TTLs at 0. Now enabled:
 - **Cache Logged-in Users:** OFF (admin sees live changes)
 
 **Note:** When stock/prices update via eBay sync, LiteSpeed auto-purges affected product pages. If stale data appears after a sync, use the ⚡ Purge All button in the WP admin bar.
+
+### ⚠️ LiteSpeed: Store API must NEVER be cached (added 2026-04-24)
+LiteSpeed will cache the WooCommerce Store API endpoint `/wp-json/wc/store/v1/cart` despite `cache-control: no-store` headers, serving the same (empty) cart response to every visitor. This causes a complete session desync between the side cart (which uses Store API) and the rest of the site (which uses wc-ajax legacy cart).
+
+**Required exclusion rules** — LiteSpeed Cache → Cache → Excludes → Do Not Cache URIs:
+```
+/wp-json/wc/store
+/wp-json/wc/store/v1
+/cart
+/checkout
+/my-account
+?wc-ajax=
+```
+
+**How to verify it's working:** Open the side cart endpoint directly in a browser with DevTools Network tab, check response headers for `x-litespeed-cache: hit` → if you see `hit`, the exclusion isn't working. Should show `x-litespeed-cache-control: no-cache` instead.
+
+This caused an hours-long debugging session on 2026-04-23 where cart items appeared in `/cart/` page but side cart showed empty, and Apple Pay showed wrong amounts. Root cause was LiteSpeed caching Store API responses across different user sessions.
 
 ### Performance Benchmarks (2026-04-07)
 | Page | TTFB Before | TTFB After (cached) | Improvement |
